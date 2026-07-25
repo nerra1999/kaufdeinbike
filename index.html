@@ -6,343 +6,230 @@
 <title>KURBEL — Motorrad Marktplatz</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
-    --asphalt:#15161a;
-    --asphalt-2:#202228;
-    --steel:#3a3e46;
-    --chrome:#c7ccd3;
-    --paper:#f1efe9;
-    --accent:#ff5b1f;
-    --accent-dim:#c9481a;
-    --ok:#7ee08a;
+    --asphalt:#15161a; --asphalt-2:#202228; --steel:#3a3e46;
+    --chrome:#c7ccd3; --paper:#f1efe9; --accent:#ff5b1f; --accent-dim:#c9481a;
   }
   *{margin:0;padding:0;box-sizing:border-box;}
-  html{scroll-behavior:smooth;}
-  body{
-    background:var(--paper);
-    color:var(--asphalt);
-    font-family:'IBM Plex Sans',sans-serif;
-    -webkit-font-smoothing:antialiased;
-  }
-  h1,h2,h3,.display{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:0.02em;}
+  body{background:var(--paper);color:var(--asphalt);font-family:'IBM Plex Sans',sans-serif;}
+  h1,h2,h3{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:0.02em;}
   .mono{font-family:'JetBrains Mono',monospace;}
   a{color:inherit;text-decoration:none;}
 
-  /* ===== Top bar ===== */
-  header{
-    background:var(--asphalt);
-    color:var(--paper);
-    padding:18px 32px;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    position:sticky;top:0;z-index:50;
-    border-bottom:3px solid var(--accent);
-  }
-  .logo{display:flex;align-items:center;gap:10px;}
-  .logo svg{width:34px;height:34px;}
-  .logo span{font-family:'Oswald',sans-serif;font-weight:700;font-size:22px;letter-spacing:0.08em;}
+  header{background:var(--asphalt);color:var(--paper);padding:18px 32px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;border-bottom:3px solid var(--accent);}
+  .logo span{font-family:'Oswald';font-weight:700;font-size:22px;}
   .logo span em{color:var(--accent);font-style:normal;}
-  nav{display:flex;gap:28px;font-size:14px;letter-spacing:0.03em;}
-  nav a{opacity:0.85;transition:opacity .2s;}
-  nav a:hover{opacity:1;color:var(--accent);}
-  .btn-sell{
-    background:var(--accent);color:var(--asphalt);
-    padding:9px 18px;font-weight:600;font-size:14px;
-    border-radius:2px;letter-spacing:0.02em;
-  }
+  .auth-area{display:flex;align-items:center;gap:12px;font-size:14px;}
+  .btn{padding:9px 18px;font-weight:600;font-size:14px;border:none;cursor:pointer;letter-spacing:0.02em;}
+  .btn-accent{background:var(--accent);color:var(--asphalt);}
+  .btn-ghost{background:transparent;color:var(--paper);border:1.5px solid var(--chrome);}
 
-  /* ===== Hero ===== */
-  .hero{
-    background:
-      radial-gradient(circle at 85% 20%, rgba(255,91,31,0.18), transparent 45%),
-      var(--asphalt);
-    color:var(--paper);
-    padding:64px 32px 48px;
-    display:grid;
-    grid-template-columns:1.1fr 0.9fr;
-    gap:40px;
-    align-items:center;
-  }
-  .hero h1{
-    font-size:clamp(38px,5vw,64px);
-    line-height:0.98;
-    font-weight:700;
-  }
-  .hero h1 .thin{font-weight:400;color:var(--chrome);}
-  .hero p{margin-top:16px;color:var(--chrome);max-width:46ch;font-size:15.5px;line-height:1.6;}
-
-  /* Speedo signature */
-  .speedo-wrap{display:flex;justify-content:center;}
-  .speedo{width:280px;height:280px;position:relative;}
-  .speedo .rpm-label{
-    position:absolute;bottom:38%;left:50%;transform:translateX(-50%);
-    text-align:center;
-  }
-  .speedo .rpm-label .num{font-family:'JetBrains Mono';font-size:44px;font-weight:700;color:var(--paper);}
-  .speedo .rpm-label .unit{font-size:11px;letter-spacing:0.15em;color:var(--chrome);display:block;margin-top:2px;}
-  .needle{
-    transform-origin:140px 140px;
-    animation:sweep 3.2s cubic-bezier(.4,0,.2,1) 1;
-  }
-  @keyframes sweep{
-    0%{transform:rotate(-125deg);}
-    60%{transform:rotate(95deg);}
-    100%{transform:rotate(48deg);}
-  }
-  @media (prefers-reduced-motion:reduce){
-    .needle{animation:none;transform:rotate(48deg);}
-  }
-
-  /* ===== Search bar ===== */
-  .search-panel{
-    background:var(--paper);
-    margin:-28px 32px 0;
-    padding:22px 26px;
-    border:1px solid var(--steel);
-    display:flex;
-    gap:14px;
-    flex-wrap:wrap;
-    position:relative;
-    z-index:2;
-    box-shadow:0 12px 24px rgba(0,0,0,0.12);
-  }
-  .field{display:flex;flex-direction:column;gap:5px;flex:1;min-width:140px;}
-  .field label{font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--steel);font-weight:600;}
-  .field select,.field input{
-    border:1.5px solid var(--asphalt);
-    background:transparent;
-    padding:10px 10px;
-    font-family:'IBM Plex Sans';
-    font-size:14px;
-    color:var(--asphalt);
-  }
-  .field select:focus,.field input:focus{outline:3px solid var(--accent);outline-offset:1px;}
-  .search-panel .btn-search{
-    align-self:flex-end;
-    background:var(--asphalt);color:var(--paper);
-    padding:11px 26px;font-weight:600;font-size:14px;
-    border:none;cursor:pointer;letter-spacing:0.03em;
-    transition:background .2s;
-  }
-  .search-panel .btn-search:hover{background:var(--accent-dim);}
-  .search-panel .btn-search:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
-
-  /* ===== Listings ===== */
-  .listings{padding:56px 32px 80px;max-width:1280px;margin:0 auto;}
-  .listings-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:28px;flex-wrap:wrap;gap:10px;}
-  .listings-head h2{font-size:26px;}
-  .count{font-family:'JetBrains Mono';font-size:13px;color:var(--steel);}
-  .grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
-    gap:22px;
-  }
-  .card{
-    background:#fff;
-    border:1px solid #ddd8cd;
-    display:flex;flex-direction:column;
-    transition:transform .18s ease, box-shadow .18s ease;
-  }
-  .card:hover{transform:translateY(-4px);box-shadow:0 14px 28px rgba(21,22,26,0.14);}
-  .card-media{
-    height:170px;
-    display:flex;align-items:center;justify-content:center;
-    position:relative;
-    overflow:hidden;
-  }
-  .card-media svg{width:78%;height:78%;}
-  .badge{
-    position:absolute;top:10px;left:10px;
-    background:var(--accent);color:var(--asphalt);
-    font-size:11px;font-weight:700;letter-spacing:0.04em;
-    padding:4px 9px;text-transform:uppercase;
-  }
-  .card-body{padding:16px 16px 18px;display:flex;flex-direction:column;gap:8px;flex:1;}
-  .card-body h3{font-size:17px;font-weight:600;letter-spacing:0.01em;}
-  .specs{display:flex;gap:14px;flex-wrap:wrap;font-family:'JetBrains Mono';font-size:12px;color:var(--steel);}
-  .specs span{white-space:nowrap;}
-  .price-row{
-    margin-top:auto;
-    display:flex;justify-content:space-between;align-items:center;
-    padding-top:10px;border-top:1px dashed #ddd8cd;
-  }
+  .listings{padding:40px 32px 80px;max-width:1280px;margin:0 auto;}
+  .listings-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:24px;flex-wrap:wrap;gap:10px;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:22px;}
+  .card{background:#fff;border:1px solid #ddd8cd;display:flex;flex-direction:column;}
+  .card-media{height:170px;background:#e5e1d5;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .card-media img{width:100%;height:100%;object-fit:cover;}
+  .card-body{padding:16px;display:flex;flex-direction:column;gap:8px;flex:1;}
+  .card-body h3{font-size:17px;}
+  .specs{display:flex;gap:12px;flex-wrap:wrap;font-family:'JetBrains Mono';font-size:12px;color:var(--steel);}
+  .price-row{margin-top:auto;display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px dashed #ddd8cd;}
   .price{font-family:'JetBrains Mono';font-weight:700;font-size:19px;}
-  .loc{font-size:12px;color:var(--steel);}
+  .empty{color:var(--steel);font-size:14px;padding:40px 0;}
 
-  /* ===== Footer ===== */
-  footer{
-    background:var(--asphalt);color:var(--chrome);
-    padding:36px 32px;
-    font-size:13px;
-    display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;
-  }
-  footer .logo span{color:var(--paper);}
-
-  @media (max-width:860px){
-    .hero{grid-template-columns:1fr;padding:44px 20px 32px;}
-    .speedo-wrap{order:-1;}
-    .search-panel{margin:-20px 20px 0;flex-direction:column;}
-    .listings{padding:40px 20px 60px;}
-    nav{display:none;}
-  }
+  /* Modal */
+  .modal-bg{display:none;position:fixed;inset:0;background:rgba(21,22,26,0.6);z-index:100;align-items:center;justify-content:center;}
+  .modal-bg.open{display:flex;}
+  .modal{background:var(--paper);width:min(520px,92vw);max-height:88vh;overflow:auto;padding:28px;border-top:4px solid var(--accent);}
+  .modal h2{font-size:22px;margin-bottom:18px;}
+  .modal label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;font-weight:600;color:var(--steel);margin-top:12px;margin-bottom:5px;}
+  .modal input,.modal select,.modal textarea{width:100%;border:1.5px solid var(--asphalt);padding:9px;font-family:'IBM Plex Sans';font-size:14px;background:transparent;}
+  .modal textarea{resize:vertical;min-height:70px;}
+  .modal-actions{display:flex;gap:10px;margin-top:20px;}
+  .btn-cancel{background:transparent;border:1.5px solid var(--asphalt);}
+  .msg{font-size:13px;margin-top:10px;}
+  .msg.err{color:#c0392b;}
+  .msg.ok{color:#1e7e34;}
 </style>
 </head>
 <body>
 
 <header>
-  <div class="logo">
-    <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="11" cy="34" r="8" stroke="#f1efe9" stroke-width="2.5"/>
-      <circle cx="37" cy="34" r="8" stroke="#f1efe9" stroke-width="2.5"/>
-      <path d="M11 34L20 18H29L37 34" stroke="#ff5b1f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M20 18L26 26H33" stroke="#f1efe9" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-    <span>KURBEL<em>.</em></span>
-  </div>
-  <nav>
-    <a href="#">Kaufen</a>
-    <a href="#">Verkaufen</a>
-    <a href="#">Werkstätten</a>
-    <a href="#">Ratgeber</a>
-  </nav>
-  <a href="#" class="btn-sell">Motorrad inserieren</a>
+  <div class="logo"><span>KURBEL<em>.</em></span></div>
+  <div class="auth-area" id="authArea"><!-- wird per JS befüllt --></div>
 </header>
-
-<section class="hero">
-  <div>
-    <h1>Vollgas<br><span class="thin">zum nächsten</span><br>Motorrad.</h1>
-    <p>Über 42.000 Motorräder von privat und Händlern. Gefiltert nach Hubraum, Führerscheinklasse und Kilometerstand — kein Blättern durch Faxstapel.</p>
-  </div>
-  <div class="speedo-wrap">
-    <svg class="speedo" viewBox="0 0 280 280">
-      <circle cx="140" cy="140" r="128" fill="var(--asphalt-2)" stroke="var(--steel)" stroke-width="2"/>
-      <g stroke="var(--chrome)" stroke-width="2">
-        <!-- tick marks -->
-        <g id="ticks"></g>
-      </g>
-      <script><![CDATA[]]></script>
-      <!-- static ticks drawn manually below -->
-      <g stroke="#c7ccd3" stroke-width="2.5">
-        <line x1="140" y1="24" x2="140" y2="40"/>
-        <line x1="221" y1="59" x2="210" y2="70"/>
-        <line x1="256" y1="140" x2="240" y2="140"/>
-        <line x1="221" y1="221" x2="210" y2="210"/>
-        <line x1="59" y1="221" x2="70" y2="210"/>
-        <line x1="24" y1="140" x2="40" y2="140"/>
-        <line x1="59" y1="59" x2="70" y2="70"/>
-      </g>
-      <path d="M 60 195 A 108 108 0 1 1 220 195" fill="none" stroke="var(--accent)" stroke-width="4" stroke-linecap="round" opacity="0.55"/>
-      <g class="needle">
-        <line x1="140" y1="140" x2="140" y2="52" stroke="var(--accent)" stroke-width="4" stroke-linecap="round"/>
-        <circle cx="140" cy="140" r="9" fill="var(--accent)"/>
-      </g>
-    </svg>
-  </div>
-</section>
-
-<form class="search-panel" onsubmit="return false;">
-  <div class="field">
-    <label for="marke">Marke</label>
-    <select id="marke">
-      <option>Alle Marken</option>
-      <option>BMW</option>
-      <option>Ducati</option>
-      <option>Honda</option>
-      <option>Kawasaki</option>
-      <option>KTM</option>
-      <option>Yamaha</option>
-    </select>
-  </div>
-  <div class="field">
-    <label for="typ">Fahrzeugtyp</label>
-    <select id="typ">
-      <option>Alle Typen</option>
-      <option>Naked Bike</option>
-      <option>Enduro / Reiseenduro</option>
-      <option>Sportler</option>
-      <option>Chopper / Cruiser</option>
-      <option>Roller</option>
-    </select>
-  </div>
-  <div class="field">
-    <label for="preis">Preis bis</label>
-    <input type="number" id="preis" placeholder="z. B. 8.000 €">
-  </div>
-  <div class="field">
-    <label for="km">Kilometerstand bis</label>
-    <input type="number" id="km" placeholder="z. B. 20.000 km">
-  </div>
-  <div class="field">
-    <label for="plz">PLZ / Umkreis</label>
-    <input type="text" id="plz" placeholder="86150 · 50 km">
-  </div>
-  <button class="btn-search" type="submit">Suchen</button>
-</form>
 
 <section class="listings">
   <div class="listings-head">
     <h2>Aktuelle Angebote</h2>
-    <span class="count mono">2.847 Treffer</span>
+    <span class="count mono" id="count">lädt…</span>
   </div>
   <div class="grid" id="grid"></div>
 </section>
 
-<footer>
-  <div class="logo"><span>KURBEL<em style="color:var(--accent)">.</em></span></div>
-  <div>© 2026 Kurbel Marktplatz GmbH · Impressum · Datenschutz</div>
-</footer>
+<!-- Login-Modal -->
+<div class="modal-bg" id="loginModalBg">
+  <div class="modal">
+    <h2>Anmelden</h2>
+    <label for="loginEmail">E-Mail</label>
+    <input type="email" id="loginEmail" placeholder="du@example.com">
+    <div class="msg" id="loginMsg"></div>
+    <div class="modal-actions">
+      <button class="btn btn-accent" id="loginSend">Magic Link senden</button>
+      <button class="btn btn-cancel" onclick="closeModal('loginModalBg')">Abbrechen</button>
+    </div>
+  </div>
+</div>
 
+<!-- Inserieren-Modal -->
+<div class="modal-bg" id="insertModalBg">
+  <div class="modal">
+    <h2>Motorrad inserieren</h2>
+    <form id="insertForm">
+      <label>Marke</label>
+      <input type="text" id="f_marke" required placeholder="z. B. Honda">
+      <label>Modell</label>
+      <input type="text" id="f_modell" required placeholder="z. B. CB650R">
+      <label>Typ</label>
+      <select id="f_typ">
+        <option>Naked Bike</option><option>Reiseenduro</option>
+        <option>Sportler</option>Cruiser<option>Roller</option>
+      </select>
+      <label>Baujahr</label>
+      <input type="number" id="f_baujahr" required min="1950" max="2026">
+      <label>Kilometerstand</label>
+      <input type="number" id="f_km" required min="0">
+      <label>Hubraum (ccm)</label>
+      <input type="number" id="f_ccm" required min="0">
+      <label>Preis (€)</label>
+      <input type="number" id="f_preis" required min="0">
+      <label>PLZ / Ort</label>
+      <input type="text" id="f_ort" placeholder="86150 Augsburg">
+      <label>Beschreibung</label>
+      <textarea id="f_beschreibung"></textarea>
+      <label>Foto</label>
+      <input type="file" id="f_bild" accept="image/*">
+      <div class="msg" id="insertMsg"></div>
+      <div class="modal-actions">
+        <button type="submit" class="btn btn-accent">Inserat veröffentlichen</button>
+        <button type="button" class="btn btn-cancel" onclick="closeModal('insertModalBg')">Abbrechen</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="config.js"></script>
 <script>
-const bikes = [
-  {name:"BMW R 1250 GS", type:"Reiseenduro", year:2022, km:"18.400 km", ccm:"1254 ccm", price:"14.990 €", loc:"Augsburg", badge:"Top Angebot", hue:0},
-  {name:"Ducati Monster 937", type:"Naked Bike", year:2023, km:"6.200 km", ccm:"937 ccm", price:"10.450 €", loc:"München", badge:null, hue:-15},
-  {name:"Honda CB650R", type:"Naked Bike", year:2021, km:"14.900 km", ccm:"649 ccm", price:"6.290 €", loc:"Stuttgart", badge:null, hue:190},
-  {name:"KTM 390 Duke", type:"Naked Bike", year:2023, km:"3.100 km", ccm:"373 ccm", price:"4.890 €", loc:"Nürnberg", badge:"Neu", hue:60},
-  {name:"Kawasaki Z900", type:"Naked Bike", year:2020, km:"22.000 km", ccm:"948 ccm", price:"7.190 €", loc:"Köln", badge:null, hue:100},
-  {name:"Yamaha MT-07", type:"Naked Bike", year:2022, km:"9.800 km", ccm:"689 ccm", price:"6.750 €", loc:"Berlin", badge:null, hue:210},
-  {name:"Harley-Davidson Sportster S", type:"Cruiser", year:2022, km:"5.400 km", ccm:"1252 ccm", price:"15.900 €", loc:"Hamburg", badge:null, hue:20},
-  {name:"Triumph Tiger 900", type:"Reiseenduro", year:2021, km:"16.700 km", ccm:"888 ccm", price:"11.200 €", loc:"Leipzig", badge:null, hue:150},
-  {name:"Suzuki GSX-8S", type:"Sportler", year:2023, km:"2.400 km", ccm:"776 ccm", price:"7.990 €", loc:"Dresden", badge:"Top Angebot", hue:250},
-];
+let currentUser = null;
 
-const bikeSVG = (hue) => `
-<svg viewBox="0 0 200 120" style="filter:hue-rotate(${hue}deg)">
-  <rect width="200" height="120" fill="#eeeae0"/>
-  <circle cx="50" cy="88" r="24" fill="none" stroke="#15161a" stroke-width="4"/>
-  <circle cx="150" cy="88" r="24" fill="none" stroke="#15161a" stroke-width="4"/>
-  <circle cx="50" cy="88" r="4" fill="#15161a"/>
-  <circle cx="150" cy="88" r="4" fill="#15161a"/>
-  <path d="M50 88 L85 45 H120 L150 88" fill="none" stroke="#ff5b1f" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M85 45 L100 65 H125" fill="none" stroke="#15161a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M120 45 L128 30" stroke="#15161a" stroke-width="4" stroke-linecap="round"/>
-  <path d="M100 65 L70 75" stroke="#15161a" stroke-width="4" stroke-linecap="round"/>
-</svg>`;
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
 
-const grid = document.getElementById('grid');
-grid.innerHTML = bikes.map(b => `
-  <article class="card">
-    <div class="card-media">
-      ${b.badge ? `<span class="badge">${b.badge}</span>` : ''}
-      ${bikeSVG(b.hue)}
-    </div>
-    <div class="card-body">
-      <h3>${b.name}</h3>
-      <div class="specs">
-        <span>${b.year}</span>
-        <span>${b.km}</span>
-        <span>${b.ccm}</span>
-        <span>${b.type}</span>
+// ---------- Auth ----------
+async function refreshAuthUI(){
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  currentUser = session?.user || null;
+  const area = document.getElementById('authArea');
+  if(currentUser){
+    area.innerHTML = `
+      <span>${currentUser.email}</span>
+      <button class="btn btn-accent" onclick="openModal('insertModalBg')">Inserieren</button>
+      <button class="btn btn-ghost" id="logoutBtn">Logout</button>`;
+    document.getElementById('logoutBtn').onclick = async () => {
+      await supabaseClient.auth.signOut();
+      refreshAuthUI();
+    };
+  } else {
+    area.innerHTML = `<button class="btn btn-accent" onclick="openModal('loginModalBg')">Anmelden zum Inserieren</button>`;
+  }
+}
+
+document.getElementById('loginSend').onclick = async () => {
+  const email = document.getElementById('loginEmail').value;
+  const msg = document.getElementById('loginMsg');
+  if(!email){ msg.textContent = "Bitte E-Mail eingeben."; msg.className="msg err"; return; }
+  const { error } = await supabaseClient.auth.signInWithOtp({ email });
+  if(error){ msg.textContent = error.message; msg.className = "msg err"; }
+  else { msg.textContent = "Link verschickt — E-Mail-Postfach checken."; msg.className = "msg ok"; }
+};
+
+supabaseClient.auth.onAuthStateChange(() => refreshAuthUI());
+
+// ---------- Inserate laden ----------
+async function loadListings(){
+  const grid = document.getElementById('grid');
+  const count = document.getElementById('count');
+  const { data, error } = await supabaseClient
+    .from('listings')
+    .select('*')
+    .eq('status', 'aktiv')
+    .order('created_at', { ascending: false });
+
+  if(error){ grid.innerHTML = `<p class="empty">Fehler beim Laden: ${error.message}</p>`; return; }
+  if(!data.length){ grid.innerHTML = `<p class="empty">Noch keine Inserate — sei der Erste!</p>`; count.textContent = "0 Treffer"; return; }
+
+  count.textContent = `${data.length} Treffer`;
+  grid.innerHTML = data.map(b => `
+    <article class="card">
+      <div class="card-media">
+        ${b.bild_url ? `<img src="${b.bild_url}" alt="${b.marke} ${b.modell}">` : ''}
       </div>
-      <div class="price-row">
-        <span class="price">${b.price}</span>
-        <span class="loc">${b.loc}</span>
+      <div class="card-body">
+        <h3>${b.marke} ${b.modell}</h3>
+        <div class="specs">
+          <span>${b.baujahr}</span><span>${b.km.toLocaleString('de-DE')} km</span>
+          <span>${b.ccm} ccm</span><span>${b.typ}</span>
+        </div>
+        <div class="price-row">
+          <span class="price">${Number(b.preis).toLocaleString('de-DE')} €</span>
+          <span>${b.ort || ''}</span>
+        </div>
       </div>
-    </div>
-  </article>
-`).join('');
+    </article>
+  `).join('');
+}
+
+// ---------- Inserat erstellen ----------
+document.getElementById('insertForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById('insertMsg');
+  if(!currentUser){ msg.textContent = "Bitte zuerst anmelden."; msg.className="msg err"; return; }
+
+  let bild_url = null;
+  const file = document.getElementById('f_bild').files[0];
+  if(file){
+    const path = `${currentUser.id}/${Date.now()}-${file.name}`;
+    const { error: uploadErr } = await supabaseClient.storage.from('bike-images').upload(path, file);
+    if(uploadErr){ msg.textContent = "Bild-Upload fehlgeschlagen: " + uploadErr.message; msg.className="msg err"; return; }
+    const { data: pub } = supabaseClient.storage.from('bike-images').getPublicUrl(path);
+    bild_url = pub.publicUrl;
+  }
+
+  const { error } = await supabaseClient.from('listings').insert({
+    user_id: currentUser.id,
+    marke: document.getElementById('f_marke').value,
+    modell: document.getElementById('f_modell').value,
+    typ: document.getElementById('f_typ').value,
+    baujahr: parseInt(document.getElementById('f_baujahr').value),
+    km: parseInt(document.getElementById('f_km').value),
+    ccm: parseInt(document.getElementById('f_ccm').value),
+    preis: parseFloat(document.getElementById('f_preis').value),
+    plz: null,
+    ort: document.getElementById('f_ort').value,
+    beschreibung: document.getElementById('f_beschreibung').value,
+    bild_url
+  });
+
+  if(error){ msg.textContent = error.message; msg.className="msg err"; return; }
+  msg.textContent = "Inserat veröffentlicht!"; msg.className="msg ok";
+  document.getElementById('insertForm').reset();
+  setTimeout(() => { closeModal('insertModalBg'); loadListings(); }, 800);
+});
+
+refreshAuthUI();
+loadListings();
 </script>
-
 </body>
 </html>
