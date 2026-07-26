@@ -26,6 +26,16 @@
   .btn-accent{background:var(--accent);color:var(--asphalt);}
   .btn-ghost{background:transparent;color:var(--paper);border:1.5px solid var(--chrome);}
 
+  .search-panel{
+    background:var(--paper);max-width:1280px;margin:24px auto 0;padding:20px 24px;
+    border:1px solid var(--steel);display:flex;gap:14px;flex-wrap:wrap;
+  }
+  .field{display:flex;flex-direction:column;gap:5px;flex:1;min-width:140px;}
+  .field label{font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--steel);font-weight:600;}
+  .field select,.field input{border:1.5px solid var(--asphalt);background:transparent;padding:9px 10px;font-family:'IBM Plex Sans';font-size:14px;}
+  .search-panel .btn-search{align-self:flex-end;background:var(--asphalt);color:var(--paper);padding:10px 24px;font-weight:600;font-size:14px;border:none;cursor:pointer;}
+  .search-panel .btn-reset{align-self:flex-end;background:transparent;color:var(--asphalt);padding:10px 16px;font-weight:600;font-size:13px;border:1.5px solid var(--asphalt);cursor:pointer;}
+
   .listings{padding:40px 32px 80px;max-width:1280px;margin:0 auto;}
   .listings-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:24px;flex-wrap:wrap;gap:10px;}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:22px;}
@@ -60,6 +70,40 @@
   <div class="logo"><span>KURBEL<em>.</em></span></div>
   <div class="auth-area" id="authArea"><!-- wird per JS befüllt --></div>
 </header>
+
+<form class="search-panel" id="filterForm" onsubmit="return false;">
+  <div class="field">
+    <label for="fil_marke">Marke</label>
+    <select id="fil_marke">
+      <option value="">Alle Marken</option>
+      <option>BMW</option><option>Ducati</option><option>Honda</option>
+      <option>Kawasaki</option><option>KTM</option><option>Yamaha</option>
+      <option>Suzuki</option><option>Triumph</option><option>Harley-Davidson</option>
+    </select>
+  </div>
+  <div class="field">
+    <label for="fil_typ">Fahrzeugtyp</label>
+    <select id="fil_typ">
+      <option value="">Alle Typen</option>
+      <option>Naked Bike</option><option>Reiseenduro</option>
+      <option>Sportler</option><option>Cruiser</option><option>Roller</option>
+    </select>
+  </div>
+  <div class="field">
+    <label for="fil_preis">Preis bis (€)</label>
+    <input type="number" id="fil_preis" placeholder="z. B. 8000">
+  </div>
+  <div class="field">
+    <label for="fil_km">Kilometerstand bis</label>
+    <input type="number" id="fil_km" placeholder="z. B. 20000">
+  </div>
+  <div class="field">
+    <label for="fil_ort">Ort</label>
+    <input type="text" id="fil_ort" placeholder="z. B. Augsburg">
+  </div>
+  <button class="btn-search" id="fil_search">Suchen</button>
+  <button class="btn-reset" id="fil_reset" type="button">Zurücksetzen</button>
+</form>
 
 <section class="listings">
   <div class="listings-head">
@@ -157,15 +201,29 @@ document.getElementById('loginSend').onclick = async () => {
 
 supabaseClient.auth.onAuthStateChange(() => refreshAuthUI());
 
-// ---------- Inserate laden ----------
+// ---------- Inserate laden (mit Filtern) ----------
 async function loadListings(){
   const grid = document.getElementById('grid');
   const count = document.getElementById('count');
-  const { data, error } = await supabaseClient
+
+  let query = supabaseClient
     .from('listings')
     .select('*')
-    .eq('status', 'aktiv')
-    .order('created_at', { ascending: false });
+    .eq('status', 'aktiv');
+
+  const marke = document.getElementById('fil_marke').value;
+  const typ = document.getElementById('fil_typ').value;
+  const preis = document.getElementById('fil_preis').value;
+  const km = document.getElementById('fil_km').value;
+  const ort = document.getElementById('fil_ort').value;
+
+  if(marke) query = query.eq('marke', marke);
+  if(typ) query = query.eq('typ', typ);
+  if(preis) query = query.lte('preis', parseFloat(preis));
+  if(km) query = query.lte('km', parseInt(km));
+  if(ort) query = query.ilike('ort', `%${ort}%`);
+
+  const { data, error } = await query.order('created_at', { ascending: false });
 
   if(error){ grid.innerHTML = `<p class="empty">Fehler beim Laden: ${error.message}</p>`; return; }
   if(!data.length){ grid.innerHTML = `<p class="empty">Noch keine Inserate — sei der Erste!</p>`; count.textContent = "0 Treffer"; return; }
@@ -226,6 +284,12 @@ document.getElementById('insertForm').addEventListener('submit', async (e) => {
   msg.textContent = "Inserat veröffentlicht!"; msg.className="msg ok";
   document.getElementById('insertForm').reset();
   setTimeout(() => { closeModal('insertModalBg'); loadListings(); }, 800);
+});
+
+document.getElementById('fil_search').addEventListener('click', () => loadListings());
+document.getElementById('fil_reset').addEventListener('click', () => {
+  document.getElementById('filterForm').reset();
+  loadListings();
 });
 
 refreshAuthUI();
