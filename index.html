@@ -164,10 +164,21 @@
   </div>
 </div>
 
+<!-- Meine Inserate Modal -->
+<div class="modal-bg" id="myListingsModalBg">
+  <div class="modal">
+    <h2>Meine Inserate</h2>
+    <div id="myListingsList" style="display:flex;flex-direction:column;gap:12px;margin-top:16px;"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-cancel" onclick="closeModal('myListingsModalBg')">Schließen</button>
+    </div>
+  </div>
+</div>
+
 <!-- Inserieren-Modal -->
 <div class="modal-bg" id="insertModalBg">
   <div class="modal">
-    <h2>Motorrad inserieren</h2>
+    <h2 id="insertModalTitle">Motorrad inserieren</h2>
     <form id="insertForm">
       <label>Marke</label>
       <input type="text" id="f_marke" required placeholder="z. B. Honda">
@@ -194,8 +205,8 @@
       <input type="file" id="f_bild" accept="image/*">
       <div class="msg" id="insertMsg"></div>
       <div class="modal-actions">
-        <button type="submit" class="btn btn-accent">Inserat veröffentlichen</button>
-        <button type="button" class="btn btn-cancel" onclick="closeModal('insertModalBg')">Abbrechen</button>
+        <button type="submit" class="btn btn-accent" id="insertSubmitBtn">Inserat veröffentlichen</button>
+        <button type="button" class="btn btn-cancel" onclick="editingId=null;closeModal('insertModalBg')">Abbrechen</button>
       </div>
     </form>
   </div>
@@ -204,9 +215,80 @@
 <script src="config.js"></script>
 <script>
 let currentUser = null;
+let editingId = null;
 
 function openModal(id){ document.getElementById(id).classList.add('open'); }
 function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+
+function openCreateModal(){
+  editingId = null;
+  document.getElementById('insertForm').reset();
+  document.getElementById('insertModalTitle').textContent = "Motorrad inserieren";
+  document.getElementById('insertSubmitBtn').textContent = "Inserat veröffentlichen";
+  openModal('insertModalBg');
+}
+
+function openEditModal(listing){
+  editingId = listing.id;
+  document.getElementById('f_marke').value = listing.marke;
+  document.getElementById('f_modell').value = listing.modell;
+  document.getElementById('f_typ').value = listing.typ;
+  document.getElementById('f_baujahr').value = listing.baujahr;
+  document.getElementById('f_km').value = listing.km;
+  document.getElementById('f_ccm').value = listing.ccm;
+  document.getElementById('f_preis').value = listing.preis;
+  document.getElementById('f_ort').value = listing.ort || '';
+  document.getElementById('f_beschreibung').value = listing.beschreibung || '';
+  document.getElementById('insertModalTitle').textContent = "Inserat bearbeiten";
+  document.getElementById('insertSubmitBtn').textContent = "Änderungen speichern";
+  closeModal('myListingsModalBg');
+  openModal('insertModalBg');
+}
+
+async function openMyListings(){
+  const list = document.getElementById('myListingsList');
+  list.innerHTML = "Lädt…";
+  const { data, error } = await supabaseClient
+    .from('listings')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .order('created_at', { ascending: false });
+
+  if(error){ list.innerHTML = `<p class="empty">Fehler: ${error.message}</p>`; openModal('myListingsModalBg'); return; }
+  if(!data.length){ list.innerHTML = `<p class="empty">Du hast noch keine Inserate.</p>`; openModal('myListingsModalBg'); return; }
+
+  list.innerHTML = data.map(b => `
+    <div style="border:1px solid #ddd8cd;padding:12px;display:flex;justify-content:space-between;align-items:center;gap:10px;">
+      <div>
+        <strong>${b.marke} ${b.modell}</strong><br>
+        <span class="mono" style="font-size:12px;color:var(--steel)">${Number(b.preis).toLocaleString('de-DE')} € · ${b.status}</span>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn btn-ghost" style="color:var(--asphalt);border-color:var(--asphalt);padding:6px 10px;font-size:12px;" onclick='openEditModal(${JSON.stringify(b).replace(/'/g,"&apos;")})'>Bearbeiten</button>
+        ${b.status === 'aktiv'
+          ? `<button class="btn btn-ghost" style="color:var(--asphalt);border-color:var(--asphalt);padding:6px 10px;font-size:12px;" onclick="markAsSold('${b.id}')">Als verkauft markieren</button>`
+          : ''}
+        <button class="btn" style="background:#c0392b;color:#fff;padding:6px 10px;font-size:12px;" onclick="deleteListing('${b.id}')">Löschen</button>
+      </div>
+    </div>
+  `).join('');
+  openModal('myListingsModalBg');
+}
+
+async function markAsSold(id){
+  const { error } = await supabaseClient.from('listings').update({ status: 'verkauft' }).eq('id', id);
+  if(error){ alert("Fehler: " + error.message); return; }
+  openMyListings();
+  loadListings();
+}
+
+async function deleteListing(id){
+  if(!confirm("Inserat wirklich unwiderruflich löschen?")) return;
+  const { error } = await supabaseClient.from('listings').delete().eq('id', id);
+  if(error){ alert("Fehler: " + error.message); return; }
+  openMyListings();
+  loadListings();
+}
 
 // ---------- Auth ----------
 async function refreshAuthUI(){
@@ -216,7 +298,8 @@ async function refreshAuthUI(){
   if(currentUser){
     area.innerHTML = `
       <span>${currentUser.email}</span>
-      <button class="btn btn-accent" onclick="openModal('insertModalBg')">Inserieren</button>
+      <button class="btn btn-ghost" onclick="openMyListings()">Meine Inserate</button>
+      <button class="btn btn-accent" onclick="openCreateModal()">Inserieren</button>
       <button class="btn btn-ghost" id="logoutBtn">Logout</button>`;
     document.getElementById('logoutBtn').onclick = async () => {
       await supabaseClient.auth.signOut();
@@ -286,13 +369,13 @@ async function loadListings(){
   `).join('');
 }
 
-// ---------- Inserat erstellen ----------
+// ---------- Inserat erstellen / bearbeiten ----------
 document.getElementById('insertForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const msg = document.getElementById('insertMsg');
   if(!currentUser){ msg.textContent = "Bitte zuerst anmelden."; msg.className="msg err"; return; }
 
-  let bild_url = null;
+  let bild_url = undefined; // undefined = beim Update unverändert lassen
   const file = document.getElementById('f_bild').files[0];
   if(file){
     const path = `${currentUser.id}/${Date.now()}-${file.name}`;
@@ -302,8 +385,7 @@ document.getElementById('insertForm').addEventListener('submit', async (e) => {
     bild_url = pub.publicUrl;
   }
 
-  const { error } = await supabaseClient.from('listings').insert({
-    user_id: currentUser.id,
+  const payload = {
     marke: document.getElementById('f_marke').value,
     modell: document.getElementById('f_modell').value,
     typ: document.getElementById('f_typ').value,
@@ -311,16 +393,26 @@ document.getElementById('insertForm').addEventListener('submit', async (e) => {
     km: parseInt(document.getElementById('f_km').value),
     ccm: parseInt(document.getElementById('f_ccm').value),
     preis: parseFloat(document.getElementById('f_preis').value),
-    plz: null,
     ort: document.getElementById('f_ort').value,
     beschreibung: document.getElementById('f_beschreibung').value,
-    bild_url
-  });
+  };
+  if(bild_url !== undefined) payload.bild_url = bild_url;
+
+  let error;
+  if(editingId){
+    ({ error } = await supabaseClient.from('listings').update(payload).eq('id', editingId));
+  } else {
+    payload.user_id = currentUser.id;
+    ({ error } = await supabaseClient.from('listings').insert(payload));
+  }
 
   if(error){ msg.textContent = error.message; msg.className="msg err"; return; }
-  msg.textContent = "Inserat veröffentlicht!"; msg.className="msg ok";
+  msg.textContent = editingId ? "Änderungen gespeichert!" : "Inserat veröffentlicht!";
+  msg.className="msg ok";
   document.getElementById('insertForm').reset();
-  setTimeout(() => { closeModal('insertModalBg'); loadListings(); }, 800);
+  const wasEditing = editingId;
+  editingId = null;
+  setTimeout(() => { closeModal('insertModalBg'); loadListings(); if(wasEditing) openMyListings(); }, 800);
 });
 
 document.getElementById('fil_search').addEventListener('click', () => loadListings());
