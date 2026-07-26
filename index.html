@@ -337,7 +337,10 @@ document.getElementById('loginSend').onclick = async () => {
   const email = document.getElementById('loginEmail').value;
   const msg = document.getElementById('loginMsg');
   if(!email){ msg.textContent = "Bitte E-Mail eingeben."; msg.className="msg err"; return; }
-  const { error } = await supabaseClient.auth.signInWithOtp({ email });
+  const { error } = await supabaseClient.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: window.location.href }
+  });
   if(error){ msg.textContent = error.message; msg.className = "msg err"; }
   else { msg.textContent = "Link verschickt — E-Mail-Postfach checken."; msg.className = "msg ok"; }
 };
