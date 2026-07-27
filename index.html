@@ -369,6 +369,31 @@
   <div class="detail-modal" id="detailModalContent"></div>
 </div>
 
+<!-- Kontakt-Modal -->
+<div class="modal-bg" id="contactModalBg">
+  <div class="modal">
+    <h2>Nachricht an den Verkäufer</h2>
+    <label for="contactText">Deine Nachricht</label>
+    <textarea id="contactText" placeholder="Hallo, ist das Motorrad noch verfügbar?"></textarea>
+    <div class="msg" id="contactMsg"></div>
+    <div class="modal-actions">
+      <button class="btn btn-accent" id="contactSend">Senden</button>
+      <button class="btn btn-cancel" type="button" onclick="closeModal('contactModalBg')">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Nachrichten-Modal -->
+<div class="modal-bg" id="messagesModalBg">
+  <div class="modal">
+    <h2>Nachrichten</h2>
+    <div id="messagesList" style="display:flex;flex-direction:column;gap:12px;margin-top:16px;"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-cancel" onclick="closeModal('messagesModalBg')">Schließen</button>
+    </div>
+  </div>
+</div>
+
 <script src="config.js"></script>
 <script>
 let currentUser = null;
@@ -462,6 +487,65 @@ async function deleteListing(id){
   loadListings();
 }
 
+// ---------- Kontakt / Nachrichten ----------
+let contactListingId = null;
+let contactEmpfaengerId = null;
+
+function openContactModal(listingId, empfaengerId){
+  contactListingId = listingId;
+  contactEmpfaengerId = empfaengerId;
+  document.getElementById('contactText').value = '';
+  document.getElementById('contactMsg').textContent = '';
+  closeModal('detailModalBg');
+  openModal('contactModalBg');
+}
+
+document.getElementById('contactSend').onclick = async () => {
+  const text = document.getElementById('contactText').value.trim();
+  const msg = document.getElementById('contactMsg');
+  if(!text){ msg.textContent = "Bitte eine Nachricht eingeben."; msg.className = "msg err"; return; }
+  const { error } = await supabaseClient.from('messages').insert({
+    listing_id: contactListingId,
+    sender_id: currentUser.id,
+    sender_email: currentUser.email,
+    empfaenger_id: contactEmpfaengerId,
+    nachricht: text
+  });
+  if(error){ msg.textContent = error.message; msg.className = "msg err"; return; }
+  msg.textContent = "Nachricht verschickt!"; msg.className = "msg ok";
+  setTimeout(() => closeModal('contactModalBg'), 800);
+};
+
+async function openMessages(){
+  const list = document.getElementById('messagesList');
+  list.innerHTML = "Lädt…";
+  const { data, error } = await supabaseClient
+    .from('messages')
+    .select('*, listings(marke, modell)')
+    .eq('empfaenger_id', currentUser.id)
+    .order('created_at', { ascending: false });
+
+  if(error){ list.innerHTML = `<p class="empty">Fehler: ${error.message}</p>`; openModal('messagesModalBg'); return; }
+  if(!data.length){ list.innerHTML = `<p class="empty">Noch keine Nachrichten erhalten.</p>`; openModal('messagesModalBg'); return; }
+
+  list.innerHTML = data.map(m => `
+    <div style="border:1px solid #ddd8cd;padding:12px;${m.gelesen ? '' : 'border-left:4px solid var(--accent);'}">
+      <div style="font-size:12px;color:var(--steel);margin-bottom:6px;">
+        Zu: <strong>${m.listings ? m.listings.marke + ' ' + m.listings.modell : 'Inserat gelöscht'}</strong>
+        · von ${m.sender_email}
+      </div>
+      <div>${m.nachricht.replace(/</g,'&lt;')}</div>
+    </div>
+  `).join('');
+
+  const ungelesenIds = data.filter(m => !m.gelesen).map(m => m.id);
+  if(ungelesenIds.length){
+    await supabaseClient.from('messages').update({ gelesen: true }).in('id', ungelesenIds);
+  }
+
+  openModal('messagesModalBg');
+}
+
 // ---------- Auth ----------
 async function refreshAuthUI(){
   const { data: { session } } = await supabaseClient.auth.getSession();
@@ -470,6 +554,7 @@ async function refreshAuthUI(){
   if(currentUser){
     area.innerHTML = `
       <span>${currentUser.email}</span>
+      <button class="btn btn-ghost" onclick="openMessages()">Nachrichten</button>
       <button class="btn btn-ghost" onclick="openMyListings()">Meine Inserate</button>
       <button class="btn btn-accent" onclick="openCreateModal()">Inserieren</button>
       <button class="btn btn-ghost" id="logoutBtn">Logout</button>`;
@@ -626,6 +711,9 @@ function openDetail(id){
       </div>
       <div class="detail-desc">${b.beschreibung ? b.beschreibung.replace(/</g,'&lt;') : '<em style="color:var(--steel)">Keine Beschreibung hinterlegt.</em>'}</div>
       <div class="modal-actions">
+        ${currentUser && currentUser.id !== b.user_id
+          ? `<button type="button" class="btn btn-accent" onclick="openContactModal('${b.id}','${b.user_id}')">Nachricht an Verkäufer</button>`
+          : ''}
         <button type="button" class="btn btn-cancel" onclick="closeModal('detailModalBg')">Schließen</button>
       </div>
     </div>
