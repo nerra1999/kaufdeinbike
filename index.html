@@ -150,6 +150,14 @@
   <div class="auth-area" id="authArea"><!-- wird per JS befüllt --></div>
 </header>
 
+<div class="search-panel" id="smartSearchPanel" style="max-width:1280px;margin:24px auto 0;">
+  <div class="field" style="flex:3;">
+    <label for="smartSearch">🔎 Intelligente Suche</label>
+    <input type="text" id="smartSearch" placeholder="z. B. Honda 120 PS 820 Sitzhöhe unfallfrei">
+  </div>
+  <button class="btn-search" id="smartSearchBtn" type="button">Suchen</button>
+</div>
+
 <form class="search-panel" id="filterForm" onsubmit="return false;">
   <div class="field">
     <label for="fil_marke">Marke</label>
@@ -522,28 +530,72 @@ async function openMessages(){
   const { data, error } = await supabaseClient
     .from('messages')
     .select('*, listings(marke, modell)')
-    .eq('empfaenger_id', currentUser.id)
-    .order('created_at', { ascending: false });
+    .or(`empfaenger_id.eq.${currentUser.id},sender_id.eq.${currentUser.id}`)
+    .order('created_at', { ascending: true });
 
   if(error){ list.innerHTML = `<p class="empty">Fehler: ${error.message}</p>`; openModal('messagesModalBg'); return; }
-  if(!data.length){ list.innerHTML = `<p class="empty">Noch keine Nachrichten erhalten.</p>`; openModal('messagesModalBg'); return; }
+  if(!data.length){ list.innerHTML = `<p class="empty">Noch keine Nachrichten.</p>`; openModal('messagesModalBg'); return; }
 
-  list.innerHTML = data.map(m => `
-    <div style="border:1px solid #ddd8cd;padding:12px;${m.gelesen ? '' : 'border-left:4px solid var(--accent);'}">
-      <div style="font-size:12px;color:var(--steel);margin-bottom:6px;">
-        Zu: <strong>${m.listings ? m.listings.marke + ' ' + m.listings.modell : 'Inserat gelöscht'}</strong>
-        · von ${m.sender_email}
+  // Nachrichten zu Konversationen gruppieren: pro Inserat + Gegenüber
+  const conversations = {};
+  data.forEach(m => {
+    const gegenueberId = m.sender_id === currentUser.id ? m.empfaenger_id : m.sender_id;
+    const key = `${m.listing_id}__${gegenueberId}`;
+    if(!conversations[key]) conversations[key] = { listing: m.listings, gegenueberId, gegenueberEmail: null, listingId: m.listing_id, nachrichten: [] };
+    conversations[key].nachrichten.push(m);
+    if(m.sender_id !== currentUser.id) conversations[key].gegenueberEmail = m.sender_email;
+  });
+  Object.values(conversations).forEach(c => { if(!c.gegenueberEmail) c.gegenueberEmail = "diese Person (noch keine Antwort erhalten)"; });
+
+  window._conversationsCache = conversations;
+
+  list.innerHTML = Object.keys(conversations).map(key => {
+    const c = conversations[key];
+    return `
+    <div style="border:1px solid #ddd8cd;padding:12px;">
+      <div style="font-size:12px;color:var(--steel);margin-bottom:8px;">
+        <strong>${c.listing ? c.listing.marke + ' ' + c.listing.modell : 'Inserat gelöscht'}</strong>
+        · Unterhaltung mit ${c.gegenueberEmail}
       </div>
-      <div>${m.nachricht.replace(/</g,'&lt;')}</div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">
+        ${c.nachrichten.map(m => `
+          <div style="align-self:${m.sender_id === currentUser.id ? 'flex-end' : 'flex-start'};background:${m.sender_id === currentUser.id ? 'var(--accent)' : '#eeeae0'};color:${m.sender_id === currentUser.id ? 'var(--asphalt)' : 'var(--asphalt)'};padding:8px 12px;max-width:80%;font-size:13px;">
+            ${m.nachricht.replace(/</g,'&lt;')}
+          </div>
+        `).join('')}
+      </div>
+      <div style="display:flex;gap:6px;">
+        <input type="text" id="reply_${key.replace(/[^a-zA-Z0-9]/g,'')}" placeholder="Antworten…" style="flex:1;border:1.5px solid var(--asphalt);padding:8px;font-family:'IBM Plex Sans';font-size:13px;">
+        <button class="btn btn-accent" style="padding:8px 14px;font-size:13px;" onclick="sendReply('${key}')">Senden</button>
+      </div>
     </div>
-  `).join('');
+  `;}).join('');
 
-  const ungelesenIds = data.filter(m => !m.gelesen).map(m => m.id);
+  const ungelesenIds = data.filter(m => !m.gelesen && m.empfaenger_id === currentUser.id).map(m => m.id);
   if(ungelesenIds.length){
     await supabaseClient.from('messages').update({ gelesen: true }).in('id', ungelesenIds);
   }
 
   openModal('messagesModalBg');
+}
+
+async function sendReply(key){
+  const c = window._conversationsCache[key];
+  const inputId = `reply_${key.replace(/[^a-zA-Z0-9]/g,'')}`;
+  const input = document.getElementById(inputId);
+  const text = input.value.trim();
+  if(!text) return;
+
+  const { error } = await supabaseClient.from('messages').insert({
+    listing_id: c.listingId,
+    sender_id: currentUser.id,
+    sender_email: currentUser.email,
+    empfaenger_id: c.gegenueberId,
+    nachricht: text
+  });
+  if(error){ alert("Fehler: " + error.message); return; }
+  input.value = '';
+  openMessages();
 }
 
 // ---------- Auth ----------
@@ -786,6 +838,82 @@ document.getElementById('insertForm').addEventListener('submit', async (e) => {
   const wasEditing = editingId;
   editingId = null;
   setTimeout(() => { closeModal('insertModalBg'); loadListings(); if(wasEditing) openMyListings(); }, 800);
+});
+
+// ---------- Intelligente Suche (Texterkennung) ----------
+function parseSmartSearch(text){
+  const t = text.toLowerCase();
+
+  // Filter erstmal komplett zurücksetzen
+  document.getElementById('filterForm').reset();
+  document.getElementById('extraFilters').querySelectorAll('input,select').forEach(el => {
+    if(el.type === 'checkbox') el.checked = false; else el.value = '';
+  });
+
+  const marken = ['bmw','ducati','honda','kawasaki','ktm','yamaha','suzuki','triumph','harley-davidson'];
+  const gefundeneMarke = marken.find(m => t.includes(m));
+  if(gefundeneMarke){
+    const select = document.getElementById('fil_marke');
+    [...select.options].forEach(o => { if(o.value.toLowerCase() === gefundeneMarke) select.value = o.value; });
+  }
+
+  const typen = ['naked bike','reiseenduro','sportler','cruiser','roller'];
+  const gefundenerTyp = typen.find(ty => t.includes(ty));
+  if(gefundenerTyp){
+    const select = document.getElementById('fil_typ');
+    [...select.options].forEach(o => { if(o.value.toLowerCase() === gefundenerTyp) select.value = o.value; });
+  }
+
+  const psMatch = t.match(/(\d+)\s*ps\b/);
+  if(psMatch) document.getElementById('fil_ps_bis').value = psMatch[1];
+
+  const sitzMatch = t.match(/(\d+)\s*(cm|mm)?\s*sitzh/);
+  if(sitzMatch){
+    let val = parseInt(sitzMatch[1]);
+    if(sitzMatch[2] === 'mm') val = Math.round(val / 10);
+    document.getElementById('fil_sitzhoehe').value = val;
+  }
+
+  const gewichtMatch = t.match(/(\d+)\s*kg\b/);
+  if(gewichtMatch) document.getElementById('fil_gewicht').value = gewichtMatch[1];
+
+  const drehmomentMatch = t.match(/(\d+)\s*nm\b/);
+  if(drehmomentMatch) document.getElementById('fil_drehmoment').value = drehmomentMatch[1];
+
+  const zylinderMatch = t.match(/(\d+)\s*zylinder/);
+  if(zylinderMatch) document.getElementById('fil_zylinder').value = zylinderMatch[1];
+
+  const kmMatch = t.match(/(\d+)\s*km\b/);
+  if(kmMatch) document.getElementById('fil_km').value = kmMatch[1];
+
+  const preisMatch = t.match(/(\d+)\s*(€|euro)/);
+  if(preisMatch) document.getElementById('fil_preis').value = preisMatch[1];
+
+  const jahrMatch = t.match(/\b(19|20)\d{2}\b/);
+  if(jahrMatch){
+    document.getElementById('fil_baujahr_von').value = jahrMatch[0];
+    document.getElementById('fil_baujahr_bis').value = jahrMatch[0];
+  }
+
+  if(t.includes('unfallfrei')) document.getElementById('fil_unfallfrei').checked = true;
+  if(t.includes('scheckheft')) document.getElementById('fil_scheckheft').checked = true;
+
+  const antriebe = ['kette','riemen','kardan'];
+  const gefundenerAntrieb = antriebe.find(a => t.includes(a));
+  if(gefundenerAntrieb){
+    const select = document.getElementById('fil_antrieb');
+    [...select.options].forEach(o => { if(o.value.toLowerCase() === gefundenerAntrieb) select.value = o.value; });
+  }
+
+  document.getElementById('extraFilters').classList.add('open');
+  loadListings();
+}
+
+document.getElementById('smartSearchBtn').addEventListener('click', () => {
+  parseSmartSearch(document.getElementById('smartSearch').value);
+});
+document.getElementById('smartSearch').addEventListener('keydown', (e) => {
+  if(e.key === 'Enter') parseSmartSearch(document.getElementById('smartSearch').value);
 });
 
 document.getElementById('fil_search').addEventListener('click', () => loadListings());
