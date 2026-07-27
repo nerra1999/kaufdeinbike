@@ -57,9 +57,11 @@
   .listings{padding:40px 32px 80px;max-width:1280px;margin:0 auto;}
   .listings-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:24px;flex-wrap:wrap;gap:10px;}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:22px;}
-  .card{background:#fff;border:1px solid #ddd8cd;display:flex;flex-direction:column;}
-  .card-media{height:170px;background:#e5e1d5;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .card{background:#fff;border:1px solid #ddd8cd;display:flex;flex-direction:column;cursor:pointer;transition:box-shadow .15s;}
+  .card:hover{box-shadow:0 8px 20px rgba(21,22,26,0.12);}
+  .card-media{height:170px;background:#e5e1d5;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;}
   .card-media img{width:100%;height:100%;object-fit:cover;}
+  .photo-count{position:absolute;bottom:8px;right:8px;background:rgba(21,22,26,0.75);color:#fff;font-size:11px;padding:3px 8px;font-family:'JetBrains Mono';}
   .card-body{padding:16px;display:flex;flex-direction:column;gap:8px;flex:1;}
   .card-body h3{font-size:17px;}
   .specs{display:flex;gap:12px;flex-wrap:wrap;font-family:'JetBrains Mono';font-size:12px;color:var(--steel);}
@@ -80,6 +82,21 @@
   .msg{font-size:13px;margin-top:10px;}
   .msg.err{color:#c0392b;}
   .msg.ok{color:#1e7e34;}
+
+  /* Detail-Modal */
+  .detail-modal{background:var(--paper);width:min(720px,94vw);max-height:90vh;overflow:auto;padding:0;border-top:4px solid var(--accent);}
+  .detail-gallery{display:flex;gap:8px;overflow-x:auto;padding:0;}
+  .detail-gallery img{width:100%;max-height:380px;object-fit:cover;flex-shrink:0;scroll-snap-align:start;}
+  .detail-gallery{scroll-snap-type:x mandatory;}
+  .detail-thumbs{display:flex;gap:6px;padding:10px 24px 0;flex-wrap:wrap;}
+  .detail-thumbs img{width:56px;height:56px;object-fit:cover;border:1.5px solid var(--steel);cursor:pointer;}
+  .detail-body{padding:20px 24px 28px;}
+  .detail-body h2{font-size:24px;margin-bottom:4px;}
+  .detail-specs{display:flex;gap:16px;flex-wrap:wrap;font-family:'JetBrains Mono';font-size:13px;color:var(--steel);margin:10px 0 16px;padding-bottom:16px;border-bottom:1px dashed #ddd8cd;}
+  .detail-price{font-family:'JetBrains Mono';font-weight:700;font-size:26px;color:var(--accent-dim);}
+  .detail-desc{margin-top:14px;line-height:1.6;white-space:pre-wrap;}
+  .existing-thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+  .existing-thumbs img{width:60px;height:60px;object-fit:cover;border:1.5px solid var(--steel);}
 
   /* ===== Mobile ===== */
   @media (max-width:640px){
@@ -233,8 +250,9 @@
       <input type="text" id="f_ort" placeholder="86150 Augsburg">
       <label>Beschreibung</label>
       <textarea id="f_beschreibung"></textarea>
-      <label>Foto</label>
-      <input type="file" id="f_bild" accept="image/*">
+      <label>Fotos (mehrere Auswahl möglich)</label>
+      <div id="existingPhotos" class="existing-thumbs"></div>
+      <input type="file" id="f_bild" accept="image/*" multiple>
       <div class="msg" id="insertMsg"></div>
       <div class="modal-actions">
         <button type="submit" class="btn btn-accent" id="insertSubmitBtn">Inserat veröffentlichen</button>
@@ -242,6 +260,11 @@
       </div>
     </form>
   </div>
+</div>
+
+<!-- Detail-Modal -->
+<div class="modal-bg" id="detailModalBg">
+  <div class="detail-modal" id="detailModalContent"></div>
 </div>
 
 <script src="config.js"></script>
@@ -255,6 +278,7 @@ function closeModal(id){ document.getElementById(id).classList.remove('open'); }
 function openCreateModal(){
   editingId = null;
   document.getElementById('insertForm').reset();
+  document.getElementById('existingPhotos').innerHTML = '';
   document.getElementById('insertModalTitle').textContent = "Motorrad inserieren";
   document.getElementById('insertSubmitBtn').textContent = "Inserat veröffentlichen";
   openModal('insertModalBg');
@@ -273,6 +297,10 @@ function openEditModal(listing){
   document.getElementById('f_beschreibung').value = listing.beschreibung || '';
   document.getElementById('insertModalTitle').textContent = "Inserat bearbeiten";
   document.getElementById('insertSubmitBtn').textContent = "Änderungen speichern";
+  const bilder = listing.bilder && listing.bilder.length ? listing.bilder : (listing.bild_url ? [listing.bild_url] : []);
+  document.getElementById('existingPhotos').innerHTML = bilder.length
+    ? bilder.map(url => `<img src="${url}">`).join('') + `<span style="font-size:11px;color:var(--steel);align-self:center;">Neue Fotos werden ergänzt, nicht ersetzt</span>`
+    : '';
   closeModal('myListingsModalBg');
   openModal('insertModalBg');
 }
@@ -400,10 +428,14 @@ async function loadListings(){
   if(!data.length){ grid.innerHTML = `<p class="empty">Noch keine Inserate — sei der Erste!</p>`; count.textContent = "0 Treffer"; return; }
 
   count.textContent = `${data.length} Treffer`;
-  grid.innerHTML = data.map(b => `
-    <article class="card">
+  window._listingsCache = data;
+  grid.innerHTML = data.map(b => {
+    const bilder = b.bilder && b.bilder.length ? b.bilder : (b.bild_url ? [b.bild_url] : []);
+    return `
+    <article class="card" onclick="openDetail('${b.id}')">
       <div class="card-media">
-        ${b.bild_url ? `<img src="${b.bild_url}" alt="${b.marke} ${b.modell}">` : ''}
+        ${bilder.length ? `<img src="${bilder[0]}" alt="${b.marke} ${b.modell}">` : ''}
+        ${bilder.length > 1 ? `<span class="photo-count">📷 ${bilder.length}</span>` : ''}
       </div>
       <div class="card-body">
         <h3>${b.marke} ${b.modell}</h3>
@@ -417,7 +449,38 @@ async function loadListings(){
         </div>
       </div>
     </article>
-  `).join('');
+  `;}).join('');
+}
+
+function openDetail(id){
+  const b = (window._listingsCache || []).find(x => x.id === id);
+  if(!b) return;
+  const bilder = b.bilder && b.bilder.length ? b.bilder : (b.bild_url ? [b.bild_url] : []);
+  const content = document.getElementById('detailModalContent');
+  content.innerHTML = `
+    ${bilder.length ? `
+      <div class="detail-gallery" id="detailGallery">
+        ${bilder.map(url => `<img src="${url}">`).join('')}
+      </div>
+      ${bilder.length > 1 ? `<div class="detail-thumbs">${bilder.map((url,i) => `<img src="${url}" onclick="document.getElementById('detailGallery').children[${i}].scrollIntoView({behavior:'smooth',inline:'start'})">`).join('')}</div>` : ''}
+    ` : ''}
+    <div class="detail-body">
+      <h2>${b.marke} ${b.modell}</h2>
+      <div class="detail-price">${Number(b.preis).toLocaleString('de-DE')} €</div>
+      <div class="detail-specs">
+        <span>📅 ${b.baujahr}</span>
+        <span>🛣️ ${b.km.toLocaleString('de-DE')} km</span>
+        <span>⚙️ ${b.ccm} ccm</span>
+        <span>🏍️ ${b.typ}</span>
+        <span>📍 ${b.ort || 'Ort nicht angegeben'}</span>
+      </div>
+      <div class="detail-desc">${b.beschreibung ? b.beschreibung.replace(/</g,'&lt;') : '<em style="color:var(--steel)">Keine Beschreibung hinterlegt.</em>'}</div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-cancel" onclick="closeModal('detailModalBg')">Schließen</button>
+      </div>
+    </div>
+  `;
+  openModal('detailModalBg');
 }
 
 // ---------- Inserat erstellen / bearbeiten ----------
@@ -426,14 +489,14 @@ document.getElementById('insertForm').addEventListener('submit', async (e) => {
   const msg = document.getElementById('insertMsg');
   if(!currentUser){ msg.textContent = "Bitte zuerst anmelden."; msg.className="msg err"; return; }
 
-  let bild_url = undefined; // undefined = beim Update unverändert lassen
-  const file = document.getElementById('f_bild').files[0];
-  if(file){
+  const files = document.getElementById('f_bild').files;
+  let neueBilder = [];
+  for(const file of files){
     const path = `${currentUser.id}/${Date.now()}-${file.name}`;
     const { error: uploadErr } = await supabaseClient.storage.from('bike-images').upload(path, file);
     if(uploadErr){ msg.textContent = "Bild-Upload fehlgeschlagen: " + uploadErr.message; msg.className="msg err"; return; }
     const { data: pub } = supabaseClient.storage.from('bike-images').getPublicUrl(path);
-    bild_url = pub.publicUrl;
+    neueBilder.push(pub.publicUrl);
   }
 
   const payload = {
@@ -447,7 +510,18 @@ document.getElementById('insertForm').addEventListener('submit', async (e) => {
     ort: document.getElementById('f_ort').value,
     beschreibung: document.getElementById('f_beschreibung').value,
   };
-  if(bild_url !== undefined) payload.bild_url = bild_url;
+
+  if(editingId){
+    if(neueBilder.length){
+      const bestehende = (window._listingsCache || []).find(x => x.id === editingId);
+      const alteBilder = bestehende && bestehende.bilder && bestehende.bilder.length
+        ? bestehende.bilder
+        : (bestehende && bestehende.bild_url ? [bestehende.bild_url] : []);
+      payload.bilder = [...alteBilder, ...neueBilder];
+    }
+  } else {
+    payload.bilder = neueBilder;
+  }
 
   let error;
   if(editingId){
