@@ -53,6 +53,8 @@
   .field select,.field input{border:1.5px solid var(--asphalt);background:transparent;padding:9px 10px;font-family:'IBM Plex Sans';font-size:14px;}
   .search-panel .btn-search{align-self:flex-end;background:var(--asphalt);color:var(--paper);padding:10px 24px;font-weight:600;font-size:14px;border:none;cursor:pointer;}
   .search-panel .btn-reset{align-self:flex-end;background:transparent;color:var(--asphalt);padding:10px 16px;font-weight:600;font-size:13px;border:1.5px solid var(--asphalt);cursor:pointer;}
+  #extraFilters{display:none;}
+  #extraFilters.open{display:flex;}
 
   .listings{padding:40px 32px 80px;max-width:1280px;margin:0 auto;}
   .listings-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:24px;flex-wrap:wrap;gap:10px;}
@@ -180,7 +182,71 @@
   </div>
   <button class="btn-search" id="fil_search">Suchen</button>
   <button class="btn-reset" id="fil_reset" type="button">Zurücksetzen</button>
+  <button class="btn-reset" type="button" onclick="document.getElementById('extraFilters').classList.toggle('open')">Erweiterte Filter</button>
 </form>
+
+<div class="search-panel" id="extraFilters" style="max-width:1280px;margin:0 auto;border-top:none;">
+  <div class="field">
+    <label for="fil_ps_von">PS von</label>
+    <input type="number" id="fil_ps_von" placeholder="z. B. 50">
+  </div>
+  <div class="field">
+    <label for="fil_ps_bis">PS bis</label>
+    <input type="number" id="fil_ps_bis" placeholder="z. B. 150">
+  </div>
+  <div class="field">
+    <label for="fil_gewicht">Gewicht bis (kg)</label>
+    <input type="number" id="fil_gewicht" placeholder="z. B. 220">
+  </div>
+  <div class="field">
+    <label for="fil_zylinder">Zylinderzahl bis</label>
+    <input type="number" id="fil_zylinder" placeholder="z. B. 4">
+  </div>
+  <div class="field">
+    <label for="fil_drehmoment">Drehmoment bis (Nm)</label>
+    <input type="number" id="fil_drehmoment" placeholder="z. B. 100">
+  </div>
+  <div class="field">
+    <label for="fil_sitzhoehe">Sitzhöhe bis (cm)</label>
+    <input type="number" id="fil_sitzhoehe" placeholder="z. B. 820">
+  </div>
+  <div class="field">
+    <label for="fil_antrieb">Antriebsart</label>
+    <select id="fil_antrieb">
+      <option value="">Alle</option><option>Kette</option><option>Riemen</option><option>Kardan</option>
+    </select>
+  </div>
+  <div class="field">
+    <label for="fil_baujahr_von">Erstzulassung von</label>
+    <input type="number" id="fil_baujahr_von" placeholder="z. B. 2015">
+  </div>
+  <div class="field">
+    <label for="fil_baujahr_bis">Erstzulassung bis</label>
+    <input type="number" id="fil_baujahr_bis" placeholder="z. B. 2024">
+  </div>
+  <div class="field">
+    <label for="fil_fsklasse">Führerscheinklasse</label>
+    <select id="fil_fsklasse">
+      <option value="">Alle</option><option>A1</option><option>A2</option><option>A</option>
+    </select>
+  </div>
+  <div class="field">
+    <label for="fil_verkaeufertyp">Verkäufer-Typ</label>
+    <select id="fil_verkaeufertyp">
+      <option value="">Alle</option><option>Privat</option><option>Händler</option>
+    </select>
+  </div>
+  <div class="field">
+    <label style="display:flex;align-items:center;gap:8px;margin-top:16px;">
+      <input type="checkbox" id="fil_unfallfrei" style="width:auto;"> Nur unfallfrei
+    </label>
+  </div>
+  <div class="field">
+    <label style="display:flex;align-items:center;gap:8px;margin-top:16px;">
+      <input type="checkbox" id="fil_scheckheft" style="width:auto;"> Nur scheckheftgepflegt
+    </label>
+  </div>
+</div>
 
 <section class="listings">
   <div class="listings-head">
@@ -250,7 +316,43 @@
       <input type="text" id="f_ort" placeholder="86150 Augsburg">
       <label>Beschreibung</label>
       <textarea id="f_beschreibung"></textarea>
-      <label>Fotos (mehrere Auswahl möglich)</label>
+
+      <div style="margin-top:18px;padding-top:14px;border-top:1px dashed #ddd8cd;">
+        <label style="margin-top:0;">Erweiterte Angaben (optional)</label>
+      </div>
+      <label>PS</label>
+      <input type="number" id="f_ps" min="0">
+      <label>Gewicht (kg)</label>
+      <input type="number" id="f_gewicht" min="0">
+      <label>Zylinderzahl</label>
+      <input type="number" id="f_zylinder" min="0">
+      <label>Drehmoment (Nm)</label>
+      <input type="number" id="f_drehmoment" min="0">
+      <label>Sitzhöhe (cm)</label>
+      <input type="number" id="f_sitzhoehe" min="0">
+      <label>Antriebsart</label>
+      <select id="f_antriebsart">
+        <option value="">Nicht angegeben</option>
+        <option>Kette</option><option>Riemen</option><option>Kardan</option>
+      </select>
+      <label>Führerscheinklasse</label>
+      <select id="f_fsklasse">
+        <option value="">Nicht angegeben</option>
+        <option>A1</option><option>A2</option><option>A</option>
+      </select>
+      <label>Verkäufer-Typ</label>
+      <select id="f_verkaeufertyp">
+        <option value="">Nicht angegeben</option>
+        <option>Privat</option><option>Händler</option>
+      </select>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:14px;">
+        <input type="checkbox" id="f_unfallfrei" style="width:auto;"> Unfallfrei
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;">
+        <input type="checkbox" id="f_scheckheft" style="width:auto;"> Scheckheftgepflegt
+      </label>
+
+      <label style="margin-top:18px;">Fotos (mehrere Auswahl möglich)</label>
       <div id="existingPhotos" class="existing-thumbs"></div>
       <input type="file" id="f_bild" accept="image/*" multiple>
       <div class="msg" id="insertMsg"></div>
@@ -295,6 +397,16 @@ function openEditModal(listing){
   document.getElementById('f_preis').value = listing.preis;
   document.getElementById('f_ort').value = listing.ort || '';
   document.getElementById('f_beschreibung').value = listing.beschreibung || '';
+  document.getElementById('f_ps').value = listing.ps || '';
+  document.getElementById('f_gewicht').value = listing.gewicht || '';
+  document.getElementById('f_zylinder').value = listing.zylinder || '';
+  document.getElementById('f_drehmoment').value = listing.drehmoment || '';
+  document.getElementById('f_sitzhoehe').value = listing.sitzhoehe || '';
+  document.getElementById('f_antriebsart').value = listing.antriebsart || '';
+  document.getElementById('f_fsklasse').value = listing.fs_klasse || '';
+  document.getElementById('f_verkaeufertyp').value = listing.verkaeufer_typ || '';
+  document.getElementById('f_unfallfrei').checked = !!listing.unfallfrei;
+  document.getElementById('f_scheckheft').checked = !!listing.scheckheft;
   document.getElementById('insertModalTitle').textContent = "Inserat bearbeiten";
   document.getElementById('insertSubmitBtn').textContent = "Änderungen speichern";
   const bilder = listing.bilder && listing.bilder.length ? listing.bilder : (listing.bild_url ? [listing.bild_url] : []);
@@ -422,6 +534,34 @@ async function loadListings(){
   if(km) query = query.lte('km', parseInt(km));
   if(ort) query = query.ilike('ort', `%${ort}%`);
 
+  const psVon = document.getElementById('fil_ps_von').value;
+  const psBis = document.getElementById('fil_ps_bis').value;
+  const gewicht = document.getElementById('fil_gewicht').value;
+  const zylinder = document.getElementById('fil_zylinder').value;
+  const drehmoment = document.getElementById('fil_drehmoment').value;
+  const sitzhoehe = document.getElementById('fil_sitzhoehe').value;
+  const antrieb = document.getElementById('fil_antrieb').value;
+  const baujahrVon = document.getElementById('fil_baujahr_von').value;
+  const baujahrBis = document.getElementById('fil_baujahr_bis').value;
+  const fsklasse = document.getElementById('fil_fsklasse').value;
+  const verkaeufertyp = document.getElementById('fil_verkaeufertyp').value;
+  const nurUnfallfrei = document.getElementById('fil_unfallfrei').checked;
+  const nurScheckheft = document.getElementById('fil_scheckheft').checked;
+
+  if(psVon) query = query.gte('ps', parseInt(psVon));
+  if(psBis) query = query.lte('ps', parseInt(psBis));
+  if(gewicht) query = query.lte('gewicht', parseInt(gewicht));
+  if(zylinder) query = query.lte('zylinder', parseInt(zylinder));
+  if(drehmoment) query = query.lte('drehmoment', parseInt(drehmoment));
+  if(sitzhoehe) query = query.lte('sitzhoehe', parseInt(sitzhoehe));
+  if(antrieb) query = query.eq('antriebsart', antrieb);
+  if(baujahrVon) query = query.gte('baujahr', parseInt(baujahrVon));
+  if(baujahrBis) query = query.lte('baujahr', parseInt(baujahrBis));
+  if(fsklasse) query = query.eq('fs_klasse', fsklasse);
+  if(verkaeufertyp) query = query.eq('verkaeufer_typ', verkaeufertyp);
+  if(nurUnfallfrei) query = query.eq('unfallfrei', true);
+  if(nurScheckheft) query = query.eq('scheckheft', true);
+
   const { data, error } = await query.order('created_at', { ascending: false });
 
   if(error){ grid.innerHTML = `<p class="empty">Fehler beim Laden: ${error.message}</p>`; return; }
@@ -473,6 +613,16 @@ function openDetail(id){
         <span>⚙️ ${b.ccm} ccm</span>
         <span>🏍️ ${b.typ}</span>
         <span>📍 ${b.ort || 'Ort nicht angegeben'}</span>
+        ${b.ps ? `<span>💪 ${b.ps} PS</span>` : ''}
+        ${b.gewicht ? `<span>⚖️ ${b.gewicht} kg</span>` : ''}
+        ${b.zylinder ? `<span>🔧 ${b.zylinder} Zylinder</span>` : ''}
+        ${b.drehmoment ? `<span>🌀 ${b.drehmoment} Nm</span>` : ''}
+        ${b.sitzhoehe ? `<span>📏 Sitzhöhe ${b.sitzhoehe} cm</span>` : ''}
+        ${b.antriebsart ? `<span>⛓️ ${b.antriebsart}</span>` : ''}
+        ${b.fs_klasse ? `<span>🪪 Klasse ${b.fs_klasse}</span>` : ''}
+        ${b.verkaeufer_typ ? `<span>👤 ${b.verkaeufer_typ}</span>` : ''}
+        ${b.unfallfrei ? `<span>✅ Unfallfrei</span>` : ''}
+        ${b.scheckheft ? `<span>📗 Scheckheftgepflegt</span>` : ''}
       </div>
       <div class="detail-desc">${b.beschreibung ? b.beschreibung.replace(/</g,'&lt;') : '<em style="color:var(--steel)">Keine Beschreibung hinterlegt.</em>'}</div>
       <div class="modal-actions">
@@ -509,6 +659,16 @@ document.getElementById('insertForm').addEventListener('submit', async (e) => {
     preis: parseFloat(document.getElementById('f_preis').value),
     ort: document.getElementById('f_ort').value,
     beschreibung: document.getElementById('f_beschreibung').value,
+    ps: document.getElementById('f_ps').value ? parseInt(document.getElementById('f_ps').value) : null,
+    gewicht: document.getElementById('f_gewicht').value ? parseInt(document.getElementById('f_gewicht').value) : null,
+    zylinder: document.getElementById('f_zylinder').value ? parseInt(document.getElementById('f_zylinder').value) : null,
+    drehmoment: document.getElementById('f_drehmoment').value ? parseInt(document.getElementById('f_drehmoment').value) : null,
+    sitzhoehe: document.getElementById('f_sitzhoehe').value ? parseInt(document.getElementById('f_sitzhoehe').value) : null,
+    antriebsart: document.getElementById('f_antriebsart').value || null,
+    fs_klasse: document.getElementById('f_fsklasse').value || null,
+    verkaeufer_typ: document.getElementById('f_verkaeufertyp').value || null,
+    unfallfrei: document.getElementById('f_unfallfrei').checked,
+    scheckheft: document.getElementById('f_scheckheft').checked,
   };
 
   if(editingId){
@@ -543,6 +703,9 @@ document.getElementById('insertForm').addEventListener('submit', async (e) => {
 document.getElementById('fil_search').addEventListener('click', () => loadListings());
 document.getElementById('fil_reset').addEventListener('click', () => {
   document.getElementById('filterForm').reset();
+  document.getElementById('extraFilters').querySelectorAll('input,select').forEach(el => {
+    if(el.type === 'checkbox') el.checked = false; else el.value = '';
+  });
   loadListings();
 });
 
