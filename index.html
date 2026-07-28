@@ -111,6 +111,8 @@
     .btn{padding:8px 12px;font-size:12.5px;flex:1;min-width:0;white-space:nowrap;}
 
     .search-panel{margin:16px 12px 0;padding:14px;gap:10px;}
+    #extraFilters{margin-top:10px;}
+    #extraFilters .field{border-bottom:1px solid #ece8de;padding-bottom:10px;}
     .field{min-width:100%;}
     .search-panel .btn-search,.search-panel .btn-reset{flex:1;align-self:stretch;padding:11px;}
 
@@ -161,11 +163,14 @@
 <form class="search-panel" id="filterForm" onsubmit="return false;">
   <div class="field">
     <label for="fil_marke">Marke</label>
-    <select id="fil_marke">
+    <select id="fil_marke" onchange="updateFilterModellOptions()">
       <option value="">Alle Marken</option>
-      <option>BMW</option><option>Ducati</option><option>Honda</option>
-      <option>Kawasaki</option><option>KTM</option><option>Yamaha</option>
-      <option>Suzuki</option><option>Triumph</option><option>Harley-Davidson</option>
+    </select>
+  </div>
+  <div class="field">
+    <label for="fil_modell">Modell</label>
+    <select id="fil_modell">
+      <option value="">Alle Modelle</option>
     </select>
   </div>
   <div class="field">
@@ -177,11 +182,11 @@
     </select>
   </div>
   <div class="field">
-    <label for="fil_preis">Preis bis (€)</label>
+    <label for="fil_preis">Preis (€)</label>
     <input type="number" id="fil_preis" placeholder="z. B. 8000">
   </div>
   <div class="field">
-    <label for="fil_km">Kilometerstand bis</label>
+    <label for="fil_km">Kilometerstand</label>
     <input type="number" id="fil_km" placeholder="z. B. 20000">
   </div>
   <div class="field">
@@ -203,19 +208,19 @@
     <input type="number" id="fil_ps_bis" placeholder="z. B. 150">
   </div>
   <div class="field">
-    <label for="fil_gewicht">Gewicht bis (kg)</label>
+    <label for="fil_gewicht">Gewicht (kg)</label>
     <input type="number" id="fil_gewicht" placeholder="z. B. 220">
   </div>
   <div class="field">
-    <label for="fil_zylinder">Zylinderzahl bis</label>
+    <label for="fil_zylinder">Zylinderzahl</label>
     <input type="number" id="fil_zylinder" placeholder="z. B. 4">
   </div>
   <div class="field">
-    <label for="fil_drehmoment">Drehmoment bis (Nm)</label>
+    <label for="fil_drehmoment">Drehmoment (Nm)</label>
     <input type="number" id="fil_drehmoment" placeholder="z. B. 100">
   </div>
   <div class="field">
-    <label for="fil_sitzhoehe">Sitzhöhe bis (cm)</label>
+    <label for="fil_sitzhoehe">Sitzhöhe (cm)</label>
     <input type="number" id="fil_sitzhoehe" placeholder="z. B. 820">
   </div>
   <div class="field">
@@ -304,9 +309,14 @@
     <h2 id="insertModalTitle">Motorrad inserieren</h2>
     <form id="insertForm">
       <label>Marke</label>
-      <input type="text" id="f_marke" required placeholder="z. B. Honda">
+      <select id="f_marke" required onchange="updateModellOptions()">
+        <option value="">Bitte wählen</option>
+      </select>
       <label>Modell</label>
-      <input type="text" id="f_modell" required placeholder="z. B. CB650R">
+      <select id="f_modell" required onchange="toggleModellSonstiges()">
+        <option value="">Erst Marke wählen</option>
+      </select>
+      <input type="text" id="f_modell_sonstiges" placeholder="Modellname eingeben" style="display:none;margin-top:8px;">
       <label>Typ</label>
       <select id="f_typ">
         <option>Naked Bike</option><option>Reiseenduro</option>
@@ -407,6 +417,63 @@
 let currentUser = null;
 let editingId = null;
 
+// ---------- Marke/Modell-Datenbank ----------
+const MODELLE_DB = {
+  "BMW": ["R 1250 GS","R 1250 GS Adventure","R 1300 GS","F 850 GS","F 900 R","F 900 XR","S 1000 RR","S 1000 R","S 1000 XR","R nineT","G 310 R","G 310 GS","K 1600 GT","R 18"],
+  "Ducati": ["Monster 937","Monster 821","Panigale V2","Panigale V4","Multistrada V4","Multistrada V2","Diavel V4","Scrambler Icon","Streetfighter V4","SuperSport 950"],
+  "Honda": ["CB650R","CB1000R","CB500F","CBR600RR","CBR1000RR-R","Africa Twin","NC750X","Rebel 500","Rebel 1100","Forza 350","SH125","Gold Wing"],
+  "Kawasaki": ["Z900","Z650","Z400","Ninja 400","Ninja 650","Ninja ZX-6R","Ninja ZX-10R","Versys 650","Versys 1000","Vulcan S","W800"],
+  "KTM": ["390 Duke","125 Duke","890 Duke","1290 Super Duke R","390 Adventure","890 Adventure","1290 Super Adventure","RC 390","690 SMC R"],
+  "Yamaha": ["MT-07","MT-09","MT-03","MT-125","YZF-R1","YZF-R7","YZF-R125","Tracer 9","Ténéré 700","XSR900","Tmax 560"],
+  "Suzuki": ["GSX-8S","GSX-8R","GSX-S750","GSX-S1000","GSX-R600","GSX-R750","GSX-R1000","V-Strom 650","V-Strom 1050","Katana"],
+  "Triumph": ["Street Triple 765","Speed Triple 1200","Tiger 900","Tiger 1200","Bonneville T100","Bonneville T120","Trident 660","Scrambler 900","Rocket 3"],
+  "Harley-Davidson": ["Sportster S","Iron 883","Street Bob","Fat Bob","Road King","Street Glide","Road Glide","Fat Boy","Low Rider S","Pan America"],
+  "Aprilia": ["RS 660","Tuono 660","Tuono V4","RSV4","SR GT 200"],
+  "Moto Guzzi": ["V7 Stone","V9 Bobber","V85 TT","V100 Mandello"],
+  "Royal Enfield": ["Classic 350","Meteor 350","Interceptor 650","Continental GT 650","Himalayan"],
+  "Vespa/Piaggio": ["Vespa Primavera","Vespa GTS 300","Piaggio Beverly","Piaggio MP3"],
+};
+
+function fuelleMarkenSelect(selectId){
+  const select = document.getElementById(selectId);
+  Object.keys(MODELLE_DB).sort().forEach(marke => {
+    const opt = document.createElement('option');
+    opt.value = marke; opt.textContent = marke;
+    select.appendChild(opt);
+  });
+}
+fuelleMarkenSelect('f_marke');
+fuelleMarkenSelect('fil_marke');
+
+function updateModellOptions(){
+  const marke = document.getElementById('f_marke').value;
+  const select = document.getElementById('f_modell');
+  select.innerHTML = '<option value="">Bitte wählen</option>';
+  (MODELLE_DB[marke] || []).forEach(m => {
+    const opt = document.createElement('option'); opt.value = m; opt.textContent = m;
+    select.appendChild(opt);
+  });
+  const sonst = document.createElement('option');
+  sonst.value = '__sonstiges__'; sonst.textContent = 'Sonstiges (manuell eingeben)';
+  select.appendChild(sonst);
+  document.getElementById('f_modell_sonstiges').style.display = 'none';
+}
+
+function toggleModellSonstiges(){
+  const isSonstiges = document.getElementById('f_modell').value === '__sonstiges__';
+  document.getElementById('f_modell_sonstiges').style.display = isSonstiges ? 'block' : 'none';
+}
+
+function updateFilterModellOptions(){
+  const marke = document.getElementById('fil_marke').value;
+  const select = document.getElementById('fil_modell');
+  select.innerHTML = '<option value="">Alle Modelle</option>';
+  (MODELLE_DB[marke] || []).forEach(m => {
+    const opt = document.createElement('option'); opt.value = m; opt.textContent = m;
+    select.appendChild(opt);
+  });
+}
+
 function openModal(id){ document.getElementById(id).classList.add('open'); }
 function closeModal(id){ document.getElementById(id).classList.remove('open'); }
 
@@ -422,7 +489,16 @@ function openCreateModal(){
 function openEditModal(listing){
   editingId = listing.id;
   document.getElementById('f_marke').value = listing.marke;
-  document.getElementById('f_modell').value = listing.modell;
+  updateModellOptions();
+  const modellOptions = [...document.getElementById('f_modell').options].map(o => o.value);
+  if(modellOptions.includes(listing.modell)){
+    document.getElementById('f_modell').value = listing.modell;
+    document.getElementById('f_modell_sonstiges').style.display = 'none';
+  } else {
+    document.getElementById('f_modell').value = '__sonstiges__';
+    document.getElementById('f_modell_sonstiges').style.display = 'block';
+    document.getElementById('f_modell_sonstiges').value = listing.modell;
+  }
   document.getElementById('f_typ').value = listing.typ;
   document.getElementById('f_baujahr').value = listing.baujahr;
   document.getElementById('f_km').value = listing.km;
@@ -660,12 +736,14 @@ async function loadListings(){
     .eq('status', 'aktiv');
 
   const marke = document.getElementById('fil_marke').value;
+  const modell = document.getElementById('fil_modell').value;
   const typ = document.getElementById('fil_typ').value;
   const preis = document.getElementById('fil_preis').value;
   const km = document.getElementById('fil_km').value;
   const ort = document.getElementById('fil_ort').value;
 
   if(marke) query = query.eq('marke', marke);
+  if(modell) query = query.eq('modell', modell);
   if(typ) query = query.eq('typ', typ);
   if(preis) query = query.lte('preis', parseFloat(preis));
   if(km) query = query.lte('km', parseInt(km));
@@ -791,7 +869,9 @@ document.getElementById('insertForm').addEventListener('submit', async (e) => {
 
   const payload = {
     marke: document.getElementById('f_marke').value,
-    modell: document.getElementById('f_modell').value,
+    modell: document.getElementById('f_modell').value === '__sonstiges__'
+      ? document.getElementById('f_modell_sonstiges').value
+      : document.getElementById('f_modell').value,
     typ: document.getElementById('f_typ').value,
     baujahr: parseInt(document.getElementById('f_baujahr').value),
     km: parseInt(document.getElementById('f_km').value),
@@ -850,7 +930,7 @@ function parseSmartSearch(text){
     if(el.type === 'checkbox') el.checked = false; else el.value = '';
   });
 
-  const marken = ['bmw','ducati','honda','kawasaki','ktm','yamaha','suzuki','triumph','harley-davidson'];
+  const marken = ['bmw','ducati','honda','kawasaki','ktm','yamaha','suzuki','triumph','harley-davidson','aprilia','moto guzzi','royal enfield'];
   const gefundeneMarke = marken.find(m => t.includes(m));
   if(gefundeneMarke){
     const select = document.getElementById('fil_marke');
