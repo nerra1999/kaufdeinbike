@@ -1,995 +1,479 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KaufDeinBike — Motorrad Marktplatz</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ciao Energy — L'energy drink parfaite</title>
+<meta name="description" content="Ciao Energy, une gamme de boissons énergisantes zero bullshit. Moins de sucre, arômes naturels, caféine de grains de café, stévia. 6 saveurs.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --asphalt:#15161a; --asphalt-2:#202228; --steel:#3a3e46;
-    --chrome:#c7ccd3; --paper:#f1efe9; --accent:#ff5b1f; --accent-dim:#c9481a;
+    --ink:#101014;
+    --paper:#F3EFE4;
+    --lime:#C8F13B;
+    --litchi:#FF6FA0;
+    --coco:#8FD14F;
+    --kiwi:#3EC28F;
+    --peche:#FFB27A;
+    --pomme:#E6483C;
+    --abricot:#FF8C42;
+    --line: rgba(243,239,228,0.14);
+    --radius: 22px;
+    font-size:16px;
   }
-  *{margin:0;padding:0;box-sizing:border-box;}
-  body{background:var(--paper);color:var(--asphalt);font-family:'IBM Plex Sans',sans-serif;}
-  h1,h2,h3{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:0.02em;}
-  .mono{font-family:'JetBrains Mono',monospace;}
-  a{color:inherit;text-decoration:none;}
-
-  header{background:var(--asphalt);color:var(--paper);padding:18px 32px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;border-bottom:3px solid var(--accent);}
-  .logo span{font-family:'Oswald';font-weight:700;font-size:22px;}
-  .logo span em{color:var(--accent);font-style:normal;}
-  .header-left{display:flex;align-items:center;gap:18px;}
-  .tacho{width:52px;height:52px;flex-shrink:0;}
-  .tacho .needle{
-    transform-origin:50px 50px;
-    animation:idle-rev 1.8s ease-in-out infinite;
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--ink);
+    color:var(--paper);
+    font-family:'Space Grotesk', sans-serif;
+    overflow-x:hidden;
   }
-  @keyframes idle-rev{
-    0%   { transform:rotate(-35deg); }
-    15%  { transform:rotate(20deg); }
-    30%  { transform:rotate(-15deg); }
-    45%  { transform:rotate(35deg); }
-    60%  { transform:rotate(-5deg); }
-    75%  { transform:rotate(15deg); }
-    100% { transform:rotate(-35deg); }
+  h1,h2,h3, .display{
+    font-family:'Archivo Black', sans-serif;
+    text-transform:uppercase;
+    line-height:0.95;
+    letter-spacing:-0.01em;
   }
-  @media (prefers-reduced-motion:reduce){
-    .tacho .needle{animation:none;transform:rotate(-10deg);}
+  a{color:inherit; text-decoration:none;}
+  ul{list-style:none;}
+  img,svg{display:block; max-width:100%;}
+  button{font-family:inherit; cursor:pointer;}
+  .wrap{max-width:1240px; margin:0 auto; padding:0 32px;}
+  ::selection{background:var(--lime); color:var(--ink);}
+
+  /* focus visibility */
+  a:focus-visible, button:focus-visible, input:focus-visible{
+    outline:2px solid var(--lime); outline-offset:3px;
   }
-  .auth-area{display:flex;align-items:center;gap:12px;font-size:14px;}
-  .btn{padding:9px 18px;font-weight:600;font-size:14px;border:none;cursor:pointer;letter-spacing:0.02em;}
-  .btn-accent{background:var(--accent);color:var(--asphalt);}
-  .btn-ghost{background:transparent;color:var(--paper);border:1.5px solid var(--chrome);}
 
-  .search-panel{
-    background:var(--paper);max-width:1280px;margin:24px auto 0;padding:20px 24px;
-    border:1px solid var(--steel);display:flex;gap:14px;flex-wrap:wrap;
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important; scroll-behavior:auto !important;}
   }
-  .field{display:flex;flex-direction:column;gap:5px;flex:1;min-width:140px;}
-  .field label{font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--steel);font-weight:600;}
-  .field select,.field input{border:1.5px solid var(--asphalt);background:transparent;padding:9px 10px;font-family:'IBM Plex Sans';font-size:14px;}
-  .search-panel .btn-search{align-self:flex-end;background:var(--asphalt);color:var(--paper);padding:10px 24px;font-weight:600;font-size:14px;border:none;cursor:pointer;}
-  .search-panel .btn-reset{align-self:flex-end;background:transparent;color:var(--asphalt);padding:10px 16px;font-weight:600;font-size:13px;border:1.5px solid var(--asphalt);cursor:pointer;}
-  #extraFilters{display:none;}
-  #extraFilters.open{display:flex;}
 
-  .listings{padding:40px 32px 80px;max-width:1280px;margin:0 auto;}
-  .listings-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:24px;flex-wrap:wrap;gap:10px;}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:22px;}
-  .card{background:#fff;border:1px solid #ddd8cd;display:flex;flex-direction:column;cursor:pointer;transition:box-shadow .15s;}
-  .card:hover{box-shadow:0 8px 20px rgba(21,22,26,0.12);}
-  .card-media{height:170px;background:#e5e1d5;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;}
-  .card-media img{width:100%;height:100%;object-fit:cover;}
-  .photo-count{position:absolute;bottom:8px;right:8px;background:rgba(21,22,26,0.75);color:#fff;font-size:11px;padding:3px 8px;font-family:'JetBrains Mono';}
-  .card-body{padding:16px;display:flex;flex-direction:column;gap:8px;flex:1;}
-  .card-body h3{font-size:17px;}
-  .specs{display:flex;gap:12px;flex-wrap:wrap;font-family:'JetBrains Mono';font-size:12px;color:var(--steel);}
-  .price-row{margin-top:auto;display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px dashed #ddd8cd;}
-  .price{font-family:'JetBrains Mono';font-weight:700;font-size:19px;}
-  .empty{color:var(--steel);font-size:14px;padding:40px 0;}
+  /* ===== NAV ===== */
+  header{
+    position:sticky; top:0; z-index:50;
+    background:rgba(16,16,20,0.82);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .nav{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:18px 32px;
+    max-width:1240px; margin:0 auto;
+  }
+  .logo{
+    font-family:'Archivo Black', sans-serif;
+    font-size:1.35rem;
+    letter-spacing:-0.02em;
+  }
+  .logo span{color:var(--lime);}
+  nav ul{display:flex; gap:34px;}
+  nav ul a{
+    font-size:0.8rem; text-transform:uppercase; letter-spacing:0.08em;
+    font-weight:600; opacity:0.75; transition:opacity .2s, color .2s;
+    position:relative; padding-bottom:3px;
+  }
+  nav ul a:hover{opacity:1; color:var(--lime);}
+  .nav-cta{
+    font-size:0.78rem; text-transform:uppercase; letter-spacing:0.06em; font-weight:700;
+    background:var(--lime); color:var(--ink); padding:11px 22px; border-radius:999px;
+    transition:transform .2s ease;
+  }
+  .nav-cta:hover{transform:translateY(-2px);}
+  .menu-toggle{display:none; background:none; border:none; color:var(--paper);}
 
-  /* Modal */
-  .modal-bg{display:none;position:fixed;inset:0;background:rgba(21,22,26,0.6);z-index:100;align-items:center;justify-content:center;}
-  .modal-bg.open{display:flex;}
-  .modal{background:var(--paper);width:min(520px,92vw);max-height:88vh;overflow:auto;padding:28px;border-top:4px solid var(--accent);}
-  .modal h2{font-size:22px;margin-bottom:18px;}
-  .modal label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;font-weight:600;color:var(--steel);margin-top:12px;margin-bottom:5px;}
-  .modal input,.modal select,.modal textarea{width:100%;border:1.5px solid var(--asphalt);padding:9px;font-family:'IBM Plex Sans';font-size:14px;background:transparent;}
-  .modal textarea{resize:vertical;min-height:70px;}
-  .modal-actions{display:flex;gap:10px;margin-top:20px;}
-  .btn-cancel{background:transparent;border:1.5px solid var(--asphalt);}
-  .msg{font-size:13px;margin-top:10px;}
-  .msg.err{color:#c0392b;}
-  .msg.ok{color:#1e7e34;}
+  /* ===== HERO ===== */
+  .hero{
+    position:relative;
+    padding:96px 32px 64px;
+    max-width:1240px; margin:0 auto;
+    display:grid; grid-template-columns:1.05fr 0.95fr; gap:40px; align-items:center;
+    min-height:88vh;
+  }
+  .hero-eyebrow{
+    display:inline-flex; align-items:center; gap:10px;
+    font-size:0.75rem; letter-spacing:0.18em; text-transform:uppercase;
+    color:var(--lime); font-weight:600; margin-bottom:22px;
+  }
+  .hero-eyebrow::before{content:""; width:8px; height:8px; border-radius:50%; background:var(--lime); box-shadow:0 0 0 4px rgba(200,241,59,0.18);}
+  .hero h1{
+    font-size:clamp(2.6rem, 5.4vw, 4.6rem);
+    margin-bottom:22px;
+  }
+  .hero h1 em{
+    font-style:normal; color:var(--lime);
+  }
+  .hero p{
+    max-width:460px; opacity:0.72; font-size:1.05rem; line-height:1.55; margin-bottom:32px;
+  }
+  .hero-actions{display:flex; gap:14px; flex-wrap:wrap;}
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:15px 28px; border-radius:999px;
+    font-size:0.85rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em;
+    transition:transform .2s ease, background .2s ease;
+  }
+  .btn-primary{background:var(--lime); color:var(--ink);}
+  .btn-primary:hover{transform:translateY(-2px);}
+  .btn-ghost{border:1px solid var(--line); color:var(--paper);}
+  .btn-ghost:hover{border-color:var(--paper);}
 
-  /* Detail-Modal */
-  .detail-modal{background:var(--paper);width:min(720px,94vw);max-height:90vh;overflow:auto;padding:0;border-top:4px solid var(--accent);}
-  .detail-gallery{display:flex;gap:8px;overflow-x:auto;padding:0;}
-  .detail-gallery img{width:100%;max-height:380px;object-fit:cover;flex-shrink:0;scroll-snap-align:start;}
-  .detail-gallery{scroll-snap-type:x mandatory;}
-  .detail-thumbs{display:flex;gap:6px;padding:10px 24px 0;flex-wrap:wrap;}
-  .detail-thumbs img{width:56px;height:56px;object-fit:cover;border:1.5px solid var(--steel);cursor:pointer;}
-  .detail-body{padding:20px 24px 28px;}
-  .detail-body h2{font-size:24px;margin-bottom:4px;}
-  .detail-specs{display:flex;gap:16px;flex-wrap:wrap;font-family:'JetBrains Mono';font-size:13px;color:var(--steel);margin:10px 0 16px;padding-bottom:16px;border-bottom:1px dashed #ddd8cd;}
-  .detail-price{font-family:'JetBrains Mono';font-weight:700;font-size:26px;color:var(--accent-dim);}
-  .detail-desc{margin-top:14px;line-height:1.6;white-space:pre-wrap;}
-  .existing-thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
-  .existing-thumbs img{width:60px;height:60px;object-fit:cover;border:1.5px solid var(--steel);}
+  .hero-stats{display:flex; gap:30px; margin-top:48px;}
+  .hero-stats div{border-left:1px solid var(--line); padding-left:14px;}
+  .hero-stats b{display:block; font-family:'Archivo Black'; font-size:1.4rem;}
+  .hero-stats span{font-size:0.72rem; opacity:0.6; text-transform:uppercase; letter-spacing:0.05em;}
 
-  /* ===== Mobile ===== */
-  @media (max-width:640px){
-    header{padding:12px 16px;flex-wrap:wrap;gap:10px;}
-    .header-left{gap:10px;}
-    .tacho{width:38px;height:38px;}
-    .logo span{font-size:17px;}
-    .auth-area{width:100%;flex-wrap:wrap;gap:8px;font-size:12px;}
-    .auth-area span{width:100%;font-size:12px;word-break:break-all;}
-    .btn{padding:8px 12px;font-size:12.5px;flex:1;min-width:0;white-space:nowrap;}
+  .can-stage{
+    position:relative; display:flex; align-items:center; justify-content:center;
+    height:560px;
+  }
+  .can-glow{
+    position:absolute; width:340px; height:340px; border-radius:50%;
+    background:radial-gradient(circle, rgba(200,241,59,0.35), transparent 70%);
+    filter:blur(10px); animation:pulse 5s ease-in-out infinite;
+  }
+  @keyframes pulse{0%,100%{transform:scale(1); opacity:0.8;} 50%{transform:scale(1.12); opacity:1;}}
+  .can{
+    position:relative; width:190px; height:440px;
+    animation:float 6s ease-in-out infinite;
+  }
+  @keyframes float{0%,100%{transform:translateY(0) rotate(-3deg);} 50%{transform:translateY(-18px) rotate(3deg);}}
+  .can svg{width:100%; height:100%;}
 
-    .search-panel{margin:16px 12px 0;padding:14px;gap:10px;}
-    #extraFilters{margin-top:10px;}
-    #extraFilters .field{border-bottom:1px solid #ece8de;padding-bottom:10px;}
-    .field{min-width:100%;}
-    .search-panel .btn-search,.search-panel .btn-reset{flex:1;align-self:stretch;padding:11px;}
+  /* ===== FLAVOR MARQUEE ===== */
+  .flavors{padding:70px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); overflow:hidden;}
+  .flavors-head{ text-align:center; margin-bottom:36px;}
+  .flavors-head .kicker{font-size:0.75rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--lime); font-weight:600;}
+  .flavors-head h2{font-size:clamp(1.8rem,3.4vw,2.6rem); margin-top:10px;}
+  .marquee{display:flex; width:max-content; gap:18px; animation:scroll 32s linear infinite;}
+  .flavors:hover .marquee{animation-play-state:paused;}
+  @keyframes scroll{from{transform:translateX(0);} to{transform:translateX(-50%);}}
+  .flavor-card{
+    width:230px; flex:none; border-radius:var(--radius);
+    padding:24px; border:1px solid var(--line);
+    background:linear-gradient(160deg, rgba(255,255,255,0.03), transparent);
+  }
+  .flavor-swatch{width:100%; height:110px; border-radius:14px; margin-bottom:18px; position:relative; overflow:hidden;}
+  .flavor-swatch::after{content:""; position:absolute; inset:0; background:radial-gradient(circle at 30% 20%, rgba(255,255,255,0.35), transparent 60%);}
+  .flavor-card h3{font-size:1.02rem; margin-bottom:8px;}
+  .flavor-card p{font-size:0.85rem; opacity:0.65; line-height:1.5;}
 
-    .listings{padding:28px 16px 60px;}
-    .listings-head h2{font-size:20px;}
-    .grid{grid-template-columns:1fr;gap:16px;}
+  /* ===== BENEFITS ===== */
+  .benefits{padding:110px 0;}
+  .section-head{max-width:640px; margin-bottom:56px;}
+  .section-head .kicker{font-size:0.75rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--lime); font-weight:600; display:block; margin-bottom:14px;}
+  .section-head h2{font-size:clamp(2rem,4vw,3.2rem);}
+  .benefit-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:20px;}
+  .flip-card{
+    position:relative; height:280px; perspective:1200px;
+  }
+  .flip-inner{
+    position:relative; width:100%; height:100%; transition:transform .6s cubic-bezier(.2,.8,.2,1);
+    transform-style:preserve-3d; border-radius:var(--radius);
+  }
+  .flip-card.flipped .flip-inner{transform:rotateY(180deg);}
+  .flip-face{
+    position:absolute; inset:0; backface-visibility:hidden;
+    border-radius:var(--radius); padding:26px;
+    display:flex; flex-direction:column; justify-content:space-between;
+    border:1px solid var(--line);
+  }
+  .flip-front{background:rgba(255,255,255,0.03);}
+  .flip-front .old-label{font-size:0.95rem; opacity:0.55; text-decoration:line-through; text-decoration-color:var(--pomme);}
+  .flip-front .x{font-size:2.2rem; font-family:'Archivo Black'; color:var(--pomme);}
+  .flip-front small{font-size:0.7rem; opacity:0.45; text-transform:uppercase; letter-spacing:0.08em;}
+  .flip-back{
+    background:var(--lime); color:var(--ink); transform:rotateY(180deg);
+  }
+  .flip-back h3{font-size:1.15rem; margin-bottom:10px;}
+  .flip-back p{font-size:0.85rem; line-height:1.45; opacity:0.85;}
+  .flip-back small{font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; font-weight:700;}
+  .benefit-hint{text-align:center; font-size:0.78rem; opacity:0.45; margin-top:26px;}
 
-    .modal{width:94vw;padding:20px;}
-    .modal-actions{flex-direction:column;}
-    .modal-actions .btn{width:100%;}
+  /* ===== FACTS BAND ===== */
+  .facts{
+    padding:70px 0; background:linear-gradient(90deg, rgba(200,241,59,0.06), transparent);
+    border-top:1px solid var(--line); border-bottom:1px solid var(--line);
+  }
+  .facts-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:24px; text-align:center;}
+  .facts-grid b{display:block; font-family:'Archivo Black'; font-size:2.2rem; color:var(--lime);}
+  .facts-grid span{font-size:0.78rem; opacity:0.6; text-transform:uppercase; letter-spacing:0.05em;}
+
+  /* ===== FAQ ===== */
+  .faq{padding:110px 0;}
+  .faq-list{border-top:1px solid var(--line);}
+  .faq-item{border-bottom:1px solid var(--line);}
+  .faq-q{
+    width:100%; background:none; border:none; color:var(--paper);
+    display:flex; align-items:center; justify-content:space-between;
+    padding:26px 4px; text-align:left; font-size:1.05rem; font-weight:600;
+  }
+  .faq-q .plus{font-family:'Archivo Black'; font-size:1.4rem; color:var(--lime); transition:transform .3s ease;}
+  .faq-item.open .plus{transform:rotate(45deg);}
+  .faq-a{max-height:0; overflow:hidden; transition:max-height .35s ease;}
+  .faq-a p{padding:0 4px 26px; opacity:0.68; line-height:1.6; max-width:760px; font-size:0.95rem;}
+
+  /* ===== NEWSLETTER ===== */
+  .newsletter{
+    padding:110px 32px; text-align:center; position:relative;
+    background:radial-gradient(circle at 50% 0%, rgba(200,241,59,0.1), transparent 60%);
+  }
+  .newsletter h2{font-size:clamp(2rem,4.4vw,3.4rem); max-width:680px; margin:0 auto 16px;}
+  .newsletter p{opacity:0.65; max-width:480px; margin:0 auto 36px;}
+  .nl-form{display:flex; gap:10px; max-width:440px; margin:0 auto; flex-wrap:wrap; justify-content:center;}
+  .nl-form input{
+    flex:1; min-width:220px; padding:15px 20px; border-radius:999px;
+    border:1px solid var(--line); background:rgba(255,255,255,0.04); color:var(--paper); font-size:0.9rem;
+  }
+  .nl-form input::placeholder{color:rgba(243,239,228,0.4);}
+  .nl-note{font-size:0.72rem; opacity:0.45; margin-top:16px;}
+  .nl-msg{margin-top:16px; font-size:0.85rem; color:var(--lime); min-height:1em;}
+
+  /* ===== FOOTER ===== */
+  footer{border-top:1px solid var(--line); padding:60px 0 30px;}
+  .footer-top{display:flex; justify-content:space-between; flex-wrap:wrap; gap:40px; margin-bottom:50px;}
+  .footer-flavors{display:flex; flex-wrap:wrap; gap:10px 26px; max-width:520px;}
+  .footer-flavors span{font-size:0.8rem; opacity:0.55;}
+  .footer-bottom{display:flex; justify-content:space-between; flex-wrap:wrap; gap:14px; font-size:0.75rem; opacity:0.5; border-top:1px solid var(--line); padding-top:24px;}
+  .footer-bottom ul{display:flex; gap:20px;}
+
+  @media (max-width: 900px){
+    .hero{grid-template-columns:1fr; padding-top:60px;}
+    .can-stage{height:360px; order:-1;}
+    nav ul{display:none;}
+    .benefit-grid{grid-template-columns:repeat(2,1fr);}
+    .facts-grid{grid-template-columns:repeat(2,1fr); row-gap:30px;}
+    .footer-top{flex-direction:column;}
+  }
+  @media (max-width:520px){
+    .benefit-grid{grid-template-columns:1fr;}
+    .hero-stats{flex-wrap:wrap; row-gap:20px;}
   }
 </style>
 </head>
 <body>
 
 <header>
-  <div class="header-left">
-    <div class="logo"><span>KaufDeinBike<em>.</em></span></div>
+  <div class="nav">
+    <a href="#" class="logo">CIAO<span>·</span>ENERGY</a>
+    <nav>
+      <ul>
+        <li><a href="#gamme">Gamme</a></li>
+        <li><a href="#benefits">Bénéfices</a></li>
+        <li><a href="#faq">FAQ</a></li>
+        <li><a href="#newsletter">Newsletter</a></li>
+      </ul>
+    </nav>
+    <a class="nav-cta" href="mailto:contact@ciaoenergy.com">Contact</a>
   </div>
-  <div class="auth-area" id="authArea"><!-- wird per JS befüllt --></div>
 </header>
 
-<div class="search-panel" id="smartSearchPanel" style="max-width:1280px;margin:24px auto 0;">
-  <div class="field" style="flex:3;">
-    <label for="smartSearch">🔎 Intelligente Suche</label>
-    <input type="text" id="smartSearch" placeholder="z. B. Honda 120 PS 820 Sitzhöhe unfallfrei">
+<section class="hero">
+  <div>
+    <div class="hero-eyebrow">Zero bullshit energy drink</div>
+    <h1>L'energy drink<br><em>parfaite</em>, point final.</h1>
+    <p>Moins de sucre, arômes naturels, caféine de grains de café et une pointe de stévia. Six saveurs, une seule promesse : pas de compromis sur ce qu'il y a dans la canette.</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="#gamme">Découvrir les 6 saveurs</a>
+      <a class="btn btn-ghost" href="#benefits">Voir ce qu'on a enlevé</a>
+    </div>
+    <div class="hero-stats">
+      <div><b>4g</b><span>Sucre / 100ml</span></div>
+      <div><b>17kcal</b><span>Pour 100ml</span></div>
+      <div><b>32mg</b><span>Caféine / 100ml</span></div>
+      <div><b>6</b><span>Saveurs</span></div>
+    </div>
   </div>
-  <button class="btn-search" id="smartSearchBtn" type="button">Suchen</button>
-</div>
 
-<form class="search-panel" id="filterForm" onsubmit="return false;">
-  <div class="field">
-    <label for="fil_marke">Marke</label>
-    <select id="fil_marke" onchange="updateFilterModellOptions()">
-      <option value="">Alle Marken</option>
-    </select>
+  <div class="can-stage">
+    <div class="can-glow"></div>
+    <div class="can">
+      <svg viewBox="0 0 200 460" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="canBody" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#8FD14F"/>
+            <stop offset="45%" stop-color="#C8F13B"/>
+            <stop offset="100%" stop-color="#6FB23A"/>
+          </linearGradient>
+        </defs>
+        <rect x="30" y="20" width="140" height="420" rx="28" fill="url(#canBody)"/>
+        <rect x="30" y="20" width="140" height="46" rx="28" fill="#101014" opacity="0.15"/>
+        <rect x="30" y="394" width="140" height="46" rx="28" fill="#101014" opacity="0.15"/>
+        <text x="100" y="220" text-anchor="middle" font-family="Archivo Black, sans-serif" font-size="26" fill="#101014">CIAO</text>
+        <text x="100" y="252" text-anchor="middle" font-family="Archivo Black, sans-serif" font-size="26" fill="#101014">ENERGY</text>
+        <text x="100" y="285" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="11" letter-spacing="3" fill="#101014" opacity="0.6">KIWI CONCOMBRE</text>
+      </svg>
+    </div>
   </div>
-  <div class="field">
-    <label for="fil_modell">Modell</label>
-    <select id="fil_modell">
-      <option value="">Alle Modelle</option>
-    </select>
-  </div>
-  <div class="field">
-    <label for="fil_typ">Fahrzeugtyp</label>
-    <select id="fil_typ">
-      <option value="">Alle Typen</option>
-      <option>Naked Bike</option><option>Reiseenduro</option>
-      <option>Sportler</option><option>Cruiser</option><option>Roller</option>
-    </select>
-  </div>
-  <div class="field">
-    <label for="fil_preis">Preis (€)</label>
-    <input type="number" id="fil_preis" placeholder="z. B. 8000">
-  </div>
-  <div class="field">
-    <label for="fil_km">Kilometerstand</label>
-    <input type="number" id="fil_km" placeholder="z. B. 20000">
-  </div>
-  <div class="field">
-    <label for="fil_ort">Ort</label>
-    <input type="text" id="fil_ort" placeholder="z. B. Augsburg">
-  </div>
-  <button class="btn-search" id="fil_search">Suchen</button>
-  <button class="btn-reset" id="fil_reset" type="button">Zurücksetzen</button>
-  <button class="btn-reset" type="button" onclick="document.getElementById('extraFilters').classList.toggle('open')">Erweiterte Filter</button>
-</form>
-
-<div class="search-panel" id="extraFilters" style="max-width:1280px;margin:0 auto;border-top:none;">
-  <div class="field">
-    <label for="fil_ps_von">PS von</label>
-    <input type="number" id="fil_ps_von" placeholder="z. B. 50">
-  </div>
-  <div class="field">
-    <label for="fil_ps_bis">PS bis</label>
-    <input type="number" id="fil_ps_bis" placeholder="z. B. 150">
-  </div>
-  <div class="field">
-    <label for="fil_gewicht">Gewicht (kg)</label>
-    <input type="number" id="fil_gewicht" placeholder="z. B. 220">
-  </div>
-  <div class="field">
-    <label for="fil_zylinder">Zylinderzahl</label>
-    <input type="number" id="fil_zylinder" placeholder="z. B. 4">
-  </div>
-  <div class="field">
-    <label for="fil_drehmoment">Drehmoment (Nm)</label>
-    <input type="number" id="fil_drehmoment" placeholder="z. B. 100">
-  </div>
-  <div class="field">
-    <label for="fil_sitzhoehe">Sitzhöhe (cm)</label>
-    <input type="number" id="fil_sitzhoehe" placeholder="z. B. 820">
-  </div>
-  <div class="field">
-    <label for="fil_antrieb">Antriebsart</label>
-    <select id="fil_antrieb">
-      <option value="">Alle</option><option>Kette</option><option>Riemen</option><option>Kardan</option>
-    </select>
-  </div>
-  <div class="field">
-    <label for="fil_baujahr_von">Erstzulassung von</label>
-    <input type="number" id="fil_baujahr_von" placeholder="z. B. 2015">
-  </div>
-  <div class="field">
-    <label for="fil_baujahr_bis">Erstzulassung bis</label>
-    <input type="number" id="fil_baujahr_bis" placeholder="z. B. 2024">
-  </div>
-  <div class="field">
-    <label for="fil_fsklasse">Führerscheinklasse</label>
-    <select id="fil_fsklasse">
-      <option value="">Alle</option><option>A1</option><option>A2</option><option>A</option>
-    </select>
-  </div>
-  <div class="field">
-    <label for="fil_verkaeufertyp">Verkäufer-Typ</label>
-    <select id="fil_verkaeufertyp">
-      <option value="">Alle</option><option>Privat</option><option>Händler</option>
-    </select>
-  </div>
-  <div class="field">
-    <label style="display:flex;align-items:center;gap:8px;margin-top:16px;">
-      <input type="checkbox" id="fil_unfallfrei" style="width:auto;"> Nur unfallfrei
-    </label>
-  </div>
-  <div class="field">
-    <label style="display:flex;align-items:center;gap:8px;margin-top:16px;">
-      <input type="checkbox" id="fil_scheckheft" style="width:auto;"> Nur scheckheftgepflegt
-    </label>
-  </div>
-</div>
-
-<section class="listings">
-  <div class="listings-head">
-    <h2>Aktuelle Angebote</h2>
-    <span class="count mono" id="count">lädt…</span>
-  </div>
-  <div class="grid" id="grid"></div>
 </section>
 
-<!-- Login-Modal -->
-<div class="modal-bg" id="loginModalBg">
-  <div class="modal">
-    <h2>Anmelden</h2>
-    <label for="loginEmail">E-Mail</label>
-    <input type="email" id="loginEmail" placeholder="du@example.com">
-    <div class="msg" id="loginMsg"></div>
-    <div class="modal-actions">
-      <button class="btn btn-accent" id="loginSend">Code senden</button>
-      <button class="btn btn-cancel" onclick="closeModal('loginModalBg')">Abbrechen</button>
-    </div>
-
-    <div id="otpStep" style="display:none;margin-top:18px;padding-top:18px;border-top:1px dashed #ddd8cd;">
-      <label for="loginOtp">Code aus der E-Mail eingeben</label>
-      <input type="text" id="loginOtp" placeholder="12345678" inputmode="numeric" maxlength="8">
-      <div class="msg" id="otpMsg"></div>
-      <div class="modal-actions">
-        <button class="btn btn-accent" id="otpVerify">Code bestätigen</button>
-      </div>
-    </div>
+<section class="flavors" id="gamme">
+  <div class="flavors-head">
+    <span class="kicker">La gamme</span>
+    <h2>6 saveurs, zéro filler</h2>
   </div>
-</div>
+  <div class="marquee" id="marquee"></div>
+</section>
 
-<!-- Meine Inserate Modal -->
-<div class="modal-bg" id="myListingsModalBg">
-  <div class="modal">
-    <h2>Meine Inserate</h2>
-    <div id="myListingsList" style="display:flex;flex-direction:column;gap:12px;margin-top:16px;"></div>
-    <div class="modal-actions">
-      <button type="button" class="btn btn-cancel" onclick="closeModal('myListingsModalBg')">Schließen</button>
+<section class="benefits" id="benefits">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker">Ce qu'on a changé</span>
+      <h2>On a viré ce qui n'avait rien à faire là</h2>
     </div>
+    <div class="benefit-grid" id="benefitGrid"></div>
+    <p class="benefit-hint">Cliquez sur une carte pour voir ce qu'on a mis à la place.</p>
   </div>
-</div>
+</section>
 
-<!-- Inserieren-Modal -->
-<div class="modal-bg" id="insertModalBg">
-  <div class="modal">
-    <h2 id="insertModalTitle">Motorrad inserieren</h2>
-    <form id="insertForm">
-      <label>Marke</label>
-      <select id="f_marke" required onchange="updateModellOptions()">
-        <option value="">Bitte wählen</option>
-      </select>
-      <label>Modell</label>
-      <select id="f_modell" required onchange="toggleModellSonstiges()">
-        <option value="">Erst Marke wählen</option>
-      </select>
-      <input type="text" id="f_modell_sonstiges" placeholder="Modellname eingeben" style="display:none;margin-top:8px;">
-      <label>Typ</label>
-      <select id="f_typ">
-        <option>Naked Bike</option><option>Reiseenduro</option>
-        <option>Sportler</option>Cruiser<option>Roller</option>
-      </select>
-      <label>Baujahr</label>
-      <input type="number" id="f_baujahr" required min="1950" max="2026">
-      <label>Kilometerstand</label>
-      <input type="number" id="f_km" required min="0">
-      <label>Hubraum (ccm)</label>
-      <input type="number" id="f_ccm" required min="0">
-      <label>Preis (€)</label>
-      <input type="number" id="f_preis" required min="0">
-      <label>PLZ / Ort</label>
-      <input type="text" id="f_ort" placeholder="86150 Augsburg">
-      <label>Beschreibung</label>
-      <textarea id="f_beschreibung"></textarea>
-
-      <div style="margin-top:18px;padding-top:14px;border-top:1px dashed #ddd8cd;">
-        <label style="margin-top:0;">Erweiterte Angaben (optional)</label>
-      </div>
-      <label>PS</label>
-      <input type="number" id="f_ps" min="0">
-      <label>Gewicht (kg)</label>
-      <input type="number" id="f_gewicht" min="0">
-      <label>Zylinderzahl</label>
-      <input type="number" id="f_zylinder" min="0">
-      <label>Drehmoment (Nm)</label>
-      <input type="number" id="f_drehmoment" min="0">
-      <label>Sitzhöhe (cm)</label>
-      <input type="number" id="f_sitzhoehe" min="0">
-      <label>Antriebsart</label>
-      <select id="f_antriebsart">
-        <option value="">Nicht angegeben</option>
-        <option>Kette</option><option>Riemen</option><option>Kardan</option>
-      </select>
-      <label>Führerscheinklasse</label>
-      <select id="f_fsklasse">
-        <option value="">Nicht angegeben</option>
-        <option>A1</option><option>A2</option><option>A</option>
-      </select>
-      <label>Verkäufer-Typ</label>
-      <select id="f_verkaeufertyp">
-        <option value="">Nicht angegeben</option>
-        <option>Privat</option><option>Händler</option>
-      </select>
-      <label style="display:flex;align-items:center;gap:8px;margin-top:14px;">
-        <input type="checkbox" id="f_unfallfrei" style="width:auto;"> Unfallfrei
-      </label>
-      <label style="display:flex;align-items:center;gap:8px;">
-        <input type="checkbox" id="f_scheckheft" style="width:auto;"> Scheckheftgepflegt
-      </label>
-
-      <label style="margin-top:18px;">Fotos (mehrere Auswahl möglich)</label>
-      <div id="existingPhotos" class="existing-thumbs"></div>
-      <input type="file" id="f_bild" accept="image/*" multiple>
-      <div class="msg" id="insertMsg"></div>
-      <div class="modal-actions">
-        <button type="submit" class="btn btn-accent" id="insertSubmitBtn">Inserat veröffentlichen</button>
-        <button type="button" class="btn btn-cancel" onclick="editingId=null;closeModal('insertModalBg')">Abbrechen</button>
-      </div>
-    </form>
+<section class="facts">
+  <div class="wrap facts-grid">
+    <div><b>0</b><span>Colorant artificiel</span></div>
+    <div><b>0</b><span>Taurine</span></div>
+    <div><b>FR</b><span>Embouteillé en France</span></div>
+    <div><b>1J</b><span>Après ouverture, au frigo</span></div>
   </div>
-</div>
+</section>
 
-<!-- Detail-Modal -->
-<div class="modal-bg" id="detailModalBg">
-  <div class="detail-modal" id="detailModalContent"></div>
-</div>
-
-<!-- Kontakt-Modal -->
-<div class="modal-bg" id="contactModalBg">
-  <div class="modal">
-    <h2>Nachricht an den Verkäufer</h2>
-    <label for="contactText">Deine Nachricht</label>
-    <textarea id="contactText" placeholder="Hallo, ist das Motorrad noch verfügbar?"></textarea>
-    <div class="msg" id="contactMsg"></div>
-    <div class="modal-actions">
-      <button class="btn btn-accent" id="contactSend">Senden</button>
-      <button class="btn btn-cancel" type="button" onclick="closeModal('contactModalBg')">Abbrechen</button>
+<section class="faq" id="faq">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker">Questions fréquentes</span>
+      <h2>Foire aux questions</h2>
     </div>
+    <div class="faq-list" id="faqList"></div>
   </div>
-</div>
+</section>
 
-<!-- Nachrichten-Modal -->
-<div class="modal-bg" id="messagesModalBg">
-  <div class="modal">
-    <h2>Nachrichten</h2>
-    <div id="messagesList" style="display:flex;flex-direction:column;gap:12px;margin-top:16px;"></div>
-    <div class="modal-actions">
-      <button type="button" class="btn btn-cancel" onclick="closeModal('messagesModalBg')">Schließen</button>
-    </div>
-  </div>
-</div>
+<section class="newsletter" id="newsletter">
+  <span class="hero-eyebrow" style="justify-content:center; display:inline-flex;">Rejoignez-nous</span>
+  <h2>Soyez les premiers informés des nouvelles saveurs</h2>
+  <p>Actualités, drops en édition limitée et coulisses de la marque, sans spam.</p>
+  <form class="nl-form" id="nlForm">
+    <input type="email" required placeholder="Votre adresse email" aria-label="Adresse email">
+    <button class="btn btn-primary" type="submit">S'inscrire</button>
+  </form>
+  <p class="nl-msg" id="nlMsg"></p>
+  <p class="nl-note">En vous inscrivant vous acceptez notre politique de confidentialité.</p>
+</section>
 
-<script src="config.js"></script>
-<script>
-let currentUser = null;
-let editingId = null;
-
-// ---------- Marke/Modell-Datenbank ----------
-const MODELLE_DB = {
-  "BMW": ["F 450 GS","F 650","F 650 CS","F 650 GS","F 650 GS Dakar","F 700 GS","F 750 GS","F 800 GS","F 800 GS Adventure","F 850 GS","F 850 GS Adventure","F 900 GS","F 900 GS Adventure","F 900 XR","G 650 GS","G 650 GS Sertão","G 650 Xcountry","G 650 Xmoto","HP 2 Megamoto","R 100 GS","R 1100 GS","R 1150 GS","R 1150 GS Adventure","R 1200 GS","F 800 R","F 900 R","K 1200 R","K 1300 R","R 100 R","R 1100 R","R 1150 R","R 1150 R Rockster","R 1200 R","R 1200 R Classic","R 1250 R","R 1200 GS Adventure","R 1250 GS","R 1250 GS Adventure","R 1300 GS","R 1300 GS Adventure","R 80 GS","S 1000 XR","R 1100 RS","R 1100 S","R 1100 S Boxercup Replika","R 1150 RS","R 12","R 12 nineT","R 1200 RS","R 1200 S","R 1200 ST","R 1250 RS","R 1300 RS","S 1000 RR","C 400 GT","C 400 X","C 600 Sport","C 650 GT","C Evolution","C1 125 Executive","C1 125 Family's Friend","C1 125 Pur","C1 200","C1 200 Executive","C1 200 Familys Friend","C1 200 Pur","F 800 S","F 800 ST","HP2 Sport","HP4","K 100 RS","K 1100 RS","K 1200 R Sport","K 1200 RS","K 1200 S","K 1300 S","R 100 RS","R 100 S","R 1300 R","R 850 R","R nineT","S 1000 R","F 800 GT","K 100 RT","K 1100 LT","K 1100 LT Spez. Edition","K 1200 GT","K 1200 LT","K 1300 GT","K 1600 B","K 1600 GT","K 1600 GTL","K 1600 GTL Exclusive","K 1600 Grand America","K 75 RT","R 100 RT","R 1100 RT","R 1150 RT","R 1200 RT","R 1250 RT","R 1300 RT","100 CS","C 600","C 650","C1","CE 02","CE 04","Concept 6","F 650 Rallye Touratech","F 650 ST","F 700","F 800","G 310 GS","G 310 R","G 450","G 450 X","G 650","G 650 Xchallenge","GG Quadster","HP2","HP2 Enduro","K 1","K 100","K 100 LT","K 1100","K 1200","K 1300","K 1600","K 75","K 75 C","K 75 S","K 850 C Cruiser","Lo Rider","M 1000 R","M 1000 RR","M 1000 XR","R 1","R 100","R 100 CS","R 100 GS Paris-Dakar","R 100 T","R 100/7","R 11","R 1100","R 1150","R 12 G/S","R 1200","R 1200 C","R 1200 C Independent","R 1200 C Montauk","R 1200 CL","R 1200 GS LC","R 16","R 17","R 18","R 18 B","R 18 Classic","R 18 Roctane","R 18 Transcontinental","R 2","R 20","R 23","R 24","R 25","R 26","R 27","R 3","R 32","R 35","R 35/2","R 37","R 39","R 4","R 42","R 45","R 45 S","R 47","R 5","R 50","R 51","R 51/2","R 51/3","R 52","R 57","R 6","R 60","R 60/6","R 61","R 62","R 63","R 65","R 65 GS","R 65 LS","R 66","R 67","R 68","R 69","R 69 S","R 71","R 75","R 75/5","R 75/6","R 75/7","R 80","R 80 R","R 80 RT","R 80 ST","R 80/7","R 850","R 850 C","R 850 GS","R 850 RT","R 90","R 90 S","R 90/6","R 900 GS RR","R 900 RT","R1300 GS Adventure","RS 54","T 600","T 800 R","T 800 S","WR 750"],
-  "Ducati": ["Monster 937","Monster 821","Panigale V2","Panigale V4","Multistrada V4","Multistrada V2","Diavel V4","Scrambler Icon","Streetfighter V4","SuperSport 950"],
-  "Honda": ["CB650R","CB1000R","CB500F","CBR600RR","CBR1000RR-R","Africa Twin","NC750X","Rebel 500","Rebel 1100","Forza 350","SH125","Gold Wing"],
-  "Kawasaki": ["Z900","Z650","Z400","Ninja 400","Ninja 650","Ninja ZX-6R","Ninja ZX-10R","Versys 650","Versys 1000","Vulcan S","W800"],
-  "KTM": ["390 Duke","125 Duke","890 Duke","1290 Super Duke R","390 Adventure","890 Adventure","1290 Super Adventure","RC 390","690 SMC R"],
-  "Yamaha": ["MT-07","MT-09","MT-03","MT-125","YZF-R1","YZF-R7","YZF-R125","Tracer 9","Ténéré 700","XSR900","Tmax 560"],
-  "Suzuki": ["GSX-8S","GSX-8R","GSX-S750","GSX-S1000","GSX-R600","GSX-R750","GSX-R1000","V-Strom 650","V-Strom 1050","Katana"],
-  "Triumph": ["Street Triple 765","Speed Triple 1200","Tiger 900","Tiger 1200","Bonneville T100","Bonneville T120","Trident 660","Scrambler 900","Rocket 3"],
-  "Harley-Davidson": ["Sportster S","Iron 883","Street Bob","Fat Bob","Road King","Street Glide","Road Glide","Fat Boy","Low Rider S","Pan America"],
-  "Aprilia": ["RS 660","Tuono 660","Tuono V4","RSV4","SR GT 200"],
-  "Moto Guzzi": ["V7 Stone","V9 Bobber","V85 TT","V100 Mandello"],
-  "Royal Enfield": ["Classic 350","Meteor 350","Interceptor 650","Continental GT 650","Himalayan"],
-  "Vespa/Piaggio": ["Vespa Primavera","Vespa GTS 300","Piaggio Beverly","Piaggio MP3"],
-};
-
-function fuelleMarkenSelect(selectId){
-  const select = document.getElementById(selectId);
-  Object.keys(MODELLE_DB).sort().forEach(marke => {
-    const opt = document.createElement('option');
-    opt.value = marke; opt.textContent = marke;
-    select.appendChild(opt);
-  });
-}
-fuelleMarkenSelect('f_marke');
-fuelleMarkenSelect('fil_marke');
-
-function updateModellOptions(){
-  const marke = document.getElementById('f_marke').value;
-  const select = document.getElementById('f_modell');
-  select.innerHTML = '<option value="">Bitte wählen</option>';
-  (MODELLE_DB[marke] || []).forEach(m => {
-    const opt = document.createElement('option'); opt.value = m; opt.textContent = m;
-    select.appendChild(opt);
-  });
-  const sonst = document.createElement('option');
-  sonst.value = '__sonstiges__'; sonst.textContent = 'Sonstiges (manuell eingeben)';
-  select.appendChild(sonst);
-  document.getElementById('f_modell_sonstiges').style.display = 'none';
-}
-
-function toggleModellSonstiges(){
-  const isSonstiges = document.getElementById('f_modell').value === '__sonstiges__';
-  document.getElementById('f_modell_sonstiges').style.display = isSonstiges ? 'block' : 'none';
-}
-
-function updateFilterModellOptions(){
-  const marke = document.getElementById('fil_marke').value;
-  const select = document.getElementById('fil_modell');
-  select.innerHTML = '<option value="">Alle Modelle</option>';
-  (MODELLE_DB[marke] || []).forEach(m => {
-    const opt = document.createElement('option'); opt.value = m; opt.textContent = m;
-    select.appendChild(opt);
-  });
-}
-
-function openModal(id){ document.getElementById(id).classList.add('open'); }
-function closeModal(id){ document.getElementById(id).classList.remove('open'); }
-
-function openCreateModal(){
-  editingId = null;
-  document.getElementById('insertForm').reset();
-  document.getElementById('existingPhotos').innerHTML = '';
-  document.getElementById('insertModalTitle').textContent = "Motorrad inserieren";
-  document.getElementById('insertSubmitBtn').textContent = "Inserat veröffentlichen";
-  openModal('insertModalBg');
-}
-
-function openEditModal(listing){
-  editingId = listing.id;
-  document.getElementById('f_marke').value = listing.marke;
-  updateModellOptions();
-  const modellOptions = [...document.getElementById('f_modell').options].map(o => o.value);
-  if(modellOptions.includes(listing.modell)){
-    document.getElementById('f_modell').value = listing.modell;
-    document.getElementById('f_modell_sonstiges').style.display = 'none';
-  } else {
-    document.getElementById('f_modell').value = '__sonstiges__';
-    document.getElementById('f_modell_sonstiges').style.display = 'block';
-    document.getElementById('f_modell_sonstiges').value = listing.modell;
-  }
-  document.getElementById('f_typ').value = listing.typ;
-  document.getElementById('f_baujahr').value = listing.baujahr;
-  document.getElementById('f_km').value = listing.km;
-  document.getElementById('f_ccm').value = listing.ccm;
-  document.getElementById('f_preis').value = listing.preis;
-  document.getElementById('f_ort').value = listing.ort || '';
-  document.getElementById('f_beschreibung').value = listing.beschreibung || '';
-  document.getElementById('f_ps').value = listing.ps || '';
-  document.getElementById('f_gewicht').value = listing.gewicht || '';
-  document.getElementById('f_zylinder').value = listing.zylinder || '';
-  document.getElementById('f_drehmoment').value = listing.drehmoment || '';
-  document.getElementById('f_sitzhoehe').value = listing.sitzhoehe || '';
-  document.getElementById('f_antriebsart').value = listing.antriebsart || '';
-  document.getElementById('f_fsklasse').value = listing.fs_klasse || '';
-  document.getElementById('f_verkaeufertyp').value = listing.verkaeufer_typ || '';
-  document.getElementById('f_unfallfrei').checked = !!listing.unfallfrei;
-  document.getElementById('f_scheckheft').checked = !!listing.scheckheft;
-  document.getElementById('insertModalTitle').textContent = "Inserat bearbeiten";
-  document.getElementById('insertSubmitBtn').textContent = "Änderungen speichern";
-  const bilder = listing.bilder && listing.bilder.length ? listing.bilder : (listing.bild_url ? [listing.bild_url] : []);
-  document.getElementById('existingPhotos').innerHTML = bilder.length
-    ? bilder.map(url => `<img src="${url}">`).join('') + `<span style="font-size:11px;color:var(--steel);align-self:center;">Neue Fotos werden ergänzt, nicht ersetzt</span>`
-    : '';
-  closeModal('myListingsModalBg');
-  openModal('insertModalBg');
-}
-
-async function openMyListings(){
-  const list = document.getElementById('myListingsList');
-  list.innerHTML = "Lädt…";
-  const { data, error } = await supabaseClient
-    .from('listings')
-    .select('*')
-    .eq('user_id', currentUser.id)
-    .order('created_at', { ascending: false });
-
-  if(error){ list.innerHTML = `<p class="empty">Fehler: ${error.message}</p>`; openModal('myListingsModalBg'); return; }
-  if(!data.length){ list.innerHTML = `<p class="empty">Du hast noch keine Inserate.</p>`; openModal('myListingsModalBg'); return; }
-
-  list.innerHTML = data.map(b => `
-    <div style="border:1px solid #ddd8cd;padding:12px;display:flex;justify-content:space-between;align-items:center;gap:10px;">
+<footer>
+  <div class="wrap">
+    <div class="footer-top">
       <div>
-        <strong>${b.marke} ${b.modell}</strong><br>
-        <span class="mono" style="font-size:12px;color:var(--steel)">${Number(b.preis).toLocaleString('de-DE')} € · ${b.status}</span>
+        <a href="#" class="logo">CIAO<span>·</span>ENERGY</a>
       </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;">
-        <button class="btn btn-ghost" style="color:var(--asphalt);border-color:var(--asphalt);padding:6px 10px;font-size:12px;" onclick='openEditModal(${JSON.stringify(b).replace(/'/g,"&apos;")})'>Bearbeiten</button>
-        ${b.status === 'aktiv'
-          ? `<button class="btn btn-ghost" style="color:var(--asphalt);border-color:var(--asphalt);padding:6px 10px;font-size:12px;" onclick="markAsSold('${b.id}')">Als verkauft markieren</button>`
-          : ''}
-        <button class="btn" style="background:#c0392b;color:#fff;padding:6px 10px;font-size:12px;" onclick="deleteListing('${b.id}')">Löschen</button>
-      </div>
+      <div class="footer-flavors" id="footerFlavors"></div>
     </div>
-  `).join('');
-  openModal('myListingsModalBg');
-}
+    <div class="footer-bottom">
+      <span>© 2026 Ciao Energy</span>
+      <ul>
+        <li><a href="mailto:contact@ciaoenergy.com">Contact</a></li>
+        <li><a href="#">Instagram</a></li>
+        <li><a href="#">TikTok</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
 
-async function markAsSold(id){
-  const { error } = await supabaseClient.from('listings').update({ status: 'verkauft' }).eq('id', id);
-  if(error){ alert("Fehler: " + error.message); return; }
-  openMyListings();
-  loadListings();
-}
+<script>
+  const flavors = [
+    {name:"Double Litchi", color:"var(--litchi)", desc:"Une explosion exotique, intense en litchi, façon Asie tropicale."},
+    {name:"Coco Citron Vert", color:"var(--coco)", desc:"Douceur lactée de coco et acidité de citron vert, en équilibre."},
+    {name:"Kiwi Concombre", color:"var(--kiwi)", desc:"La plus rafraîchissante de la gamme : éclat juteux, grande fraîcheur."},
+    {name:"Pêche Blanche", color:"var(--peche)", desc:"Une recette florale, délicatement parfumée à la pêche blanche."},
+    {name:"Pomme Rhubarbe", color:"var(--pomme)", desc:"L'energy drink du jardin : fraîcheur de pomme, acidité de rhubarbe."},
+    {name:"Abricot Framboise", color:"var(--abricot)", desc:"Un duo solaire et gourmand, entre douceur et vivacité."},
+  ];
+  const marquee = document.getElementById('marquee');
+  const cardsHTML = flavors.map(f => `
+    <div class="flavor-card">
+      <div class="flavor-swatch" style="background:${f.color}"></div>
+      <h3>${f.name}</h3>
+      <p>${f.desc}</p>
+    </div>`).join('');
+  marquee.innerHTML = cardsHTML + cardsHTML; // duplicate for seamless loop
 
-async function deleteListing(id){
-  if(!confirm("Inserat wirklich unwiderruflich löschen?")) return;
-  const { error } = await supabaseClient.from('listings').delete().eq('id', id);
-  if(error){ alert("Fehler: " + error.message); return; }
-  openMyListings();
-  loadListings();
-}
+  const footerFlavors = document.getElementById('footerFlavors');
+  footerFlavors.innerHTML = flavors.map(f => `<span>${f.name}</span>`).join('');
 
-// ---------- Kontakt / Nachrichten ----------
-let contactListingId = null;
-let contactEmpfaengerId = null;
-
-function openContactModal(listingId, empfaengerId){
-  contactListingId = listingId;
-  contactEmpfaengerId = empfaengerId;
-  document.getElementById('contactText').value = '';
-  document.getElementById('contactMsg').textContent = '';
-  closeModal('detailModalBg');
-  openModal('contactModalBg');
-}
-
-document.getElementById('contactSend').onclick = async () => {
-  const text = document.getElementById('contactText').value.trim();
-  const msg = document.getElementById('contactMsg');
-  if(!text){ msg.textContent = "Bitte eine Nachricht eingeben."; msg.className = "msg err"; return; }
-  const { error } = await supabaseClient.from('messages').insert({
-    listing_id: contactListingId,
-    sender_id: currentUser.id,
-    sender_email: currentUser.email,
-    empfaenger_id: contactEmpfaengerId,
-    nachricht: text
-  });
-  if(error){ msg.textContent = error.message; msg.className = "msg err"; return; }
-  msg.textContent = "Nachricht verschickt!"; msg.className = "msg ok";
-  setTimeout(() => closeModal('contactModalBg'), 800);
-};
-
-async function openMessages(){
-  const list = document.getElementById('messagesList');
-  list.innerHTML = "Lädt…";
-  const { data, error } = await supabaseClient
-    .from('messages')
-    .select('*, listings(marke, modell)')
-    .or(`empfaenger_id.eq.${currentUser.id},sender_id.eq.${currentUser.id}`)
-    .order('created_at', { ascending: true });
-
-  if(error){ list.innerHTML = `<p class="empty">Fehler: ${error.message}</p>`; openModal('messagesModalBg'); return; }
-  if(!data.length){ list.innerHTML = `<p class="empty">Noch keine Nachrichten.</p>`; openModal('messagesModalBg'); return; }
-
-  // Nachrichten zu Konversationen gruppieren: pro Inserat + Gegenüber
-  const conversations = {};
-  data.forEach(m => {
-    const gegenueberId = m.sender_id === currentUser.id ? m.empfaenger_id : m.sender_id;
-    const key = `${m.listing_id}__${gegenueberId}`;
-    if(!conversations[key]) conversations[key] = { listing: m.listings, gegenueberId, gegenueberEmail: null, listingId: m.listing_id, nachrichten: [] };
-    conversations[key].nachrichten.push(m);
-    if(m.sender_id !== currentUser.id) conversations[key].gegenueberEmail = m.sender_email;
-  });
-  Object.values(conversations).forEach(c => { if(!c.gegenueberEmail) c.gegenueberEmail = "diese Person (noch keine Antwort erhalten)"; });
-
-  window._conversationsCache = conversations;
-
-  list.innerHTML = Object.keys(conversations).map(key => {
-    const c = conversations[key];
-    return `
-    <div style="border:1px solid #ddd8cd;padding:12px;">
-      <div style="font-size:12px;color:var(--steel);margin-bottom:8px;">
-        <strong>${c.listing ? c.listing.marke + ' ' + c.listing.modell : 'Inserat gelöscht'}</strong>
-        · Unterhaltung mit ${c.gegenueberEmail}
-      </div>
-      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">
-        ${c.nachrichten.map(m => `
-          <div style="align-self:${m.sender_id === currentUser.id ? 'flex-end' : 'flex-start'};background:${m.sender_id === currentUser.id ? 'var(--accent)' : '#eeeae0'};color:${m.sender_id === currentUser.id ? 'var(--asphalt)' : 'var(--asphalt)'};padding:8px 12px;max-width:80%;font-size:13px;">
-            ${m.nachricht.replace(/</g,'&lt;')}
+  const benefits = [
+    {old:"11g de sucre", title:"Moins de sucre", body:"Une boisson moins sucrée, avec exclusivement du sucre de canne pour son origine végétale et son goût en bouche.", tag:"4g / 100ml"},
+    {old:"Arômes artificiels", title:"Arômes naturels", body:"Des arômes naturels issus de fruits et de plantes, sélectionnés pour leur puissance et leur richesse gustative.", tag:"100% naturel"},
+    {old:"Caféine de synthèse", title:"Grains de café", body:"L'énergie vient de grains de café, source naturelle de caféine, complétés par du guarana.", tag:"32mg / 100ml"},
+    {old:"Aspartame, sucralose…", title:"Stévia", body:"Un édulcorant d'origine végétale, extrait de stévia, pour compléter le sucre de canne avec douceur.", tag:"Origine végétale"},
+  ];
+  const grid = document.getElementById('benefitGrid');
+  grid.innerHTML = benefits.map((b,i) => `
+    <div class="flip-card" data-i="${i}" role="button" tabindex="0" aria-label="Voir ${b.title}">
+      <div class="flip-inner">
+        <div class="flip-face flip-front">
+          <div class="x">×</div>
+          <div>
+            <div class="old-label">${b.old}</div>
+            <small>Pas chez nous</small>
           </div>
-        `).join('')}
-      </div>
-      <div style="display:flex;gap:6px;">
-        <input type="text" id="reply_${key.replace(/[^a-zA-Z0-9]/g,'')}" placeholder="Antworten…" style="flex:1;border:1.5px solid var(--asphalt);padding:8px;font-family:'IBM Plex Sans';font-size:13px;">
-        <button class="btn btn-accent" style="padding:8px 14px;font-size:13px;" onclick="sendReply('${key}')">Senden</button>
-      </div>
-    </div>
-  `;}).join('');
-
-  const ungelesenIds = data.filter(m => !m.gelesen && m.empfaenger_id === currentUser.id).map(m => m.id);
-  if(ungelesenIds.length){
-    await supabaseClient.from('messages').update({ gelesen: true }).in('id', ungelesenIds);
-  }
-
-  openModal('messagesModalBg');
-}
-
-async function sendReply(key){
-  const c = window._conversationsCache[key];
-  const inputId = `reply_${key.replace(/[^a-zA-Z0-9]/g,'')}`;
-  const input = document.getElementById(inputId);
-  const text = input.value.trim();
-  if(!text) return;
-
-  const { error } = await supabaseClient.from('messages').insert({
-    listing_id: c.listingId,
-    sender_id: currentUser.id,
-    sender_email: currentUser.email,
-    empfaenger_id: c.gegenueberId,
-    nachricht: text
-  });
-  if(error){ alert("Fehler: " + error.message); return; }
-  input.value = '';
-  openMessages();
-}
-
-// ---------- Auth ----------
-async function refreshAuthUI(){
-  const { data: { session } } = await supabaseClient.auth.getSession();
-  currentUser = session?.user || null;
-  const area = document.getElementById('authArea');
-  if(currentUser){
-    area.innerHTML = `
-      <span>${currentUser.email}</span>
-      <button class="btn btn-ghost" onclick="openMessages()">Nachrichten</button>
-      <button class="btn btn-ghost" onclick="openMyListings()">Meine Inserate</button>
-      <button class="btn btn-accent" onclick="openCreateModal()">Inserieren</button>
-      <button class="btn btn-ghost" id="logoutBtn">Logout</button>`;
-    document.getElementById('logoutBtn').onclick = async () => {
-      await supabaseClient.auth.signOut();
-      refreshAuthUI();
-    };
-  } else {
-    area.innerHTML = `<button class="btn btn-accent" onclick="openModal('loginModalBg')">Anmelden zum Inserieren</button>`;
-  }
-}
-
-document.getElementById('loginSend').onclick = async () => {
-  const email = document.getElementById('loginEmail').value;
-  const msg = document.getElementById('loginMsg');
-  if(!email){ msg.textContent = "Bitte E-Mail eingeben."; msg.className="msg err"; return; }
-  const { error } = await supabaseClient.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: window.location.href }
-  });
-  if(error){ msg.textContent = error.message; msg.className = "msg err"; }
-  else {
-    msg.textContent = "Code verschickt — E-Mail-Postfach checken.";
-    msg.className = "msg ok";
-    document.getElementById('otpStep').style.display = "block";
-  }
-};
-
-document.getElementById('otpVerify').onclick = async () => {
-  const email = document.getElementById('loginEmail').value;
-  const token = document.getElementById('loginOtp').value.trim();
-  const msg = document.getElementById('otpMsg');
-  if(!token){ msg.textContent = "Bitte Code eingeben."; msg.className="msg err"; return; }
-  const { error } = await supabaseClient.auth.verifyOtp({ email, token, type: 'email' });
-  if(error){ msg.textContent = error.message; msg.className = "msg err"; return; }
-  closeModal('loginModalBg');
-  document.getElementById('loginOtp').value = '';
-  document.getElementById('otpStep').style.display = "none";
-};
-
-supabaseClient.auth.onAuthStateChange(() => refreshAuthUI());
-
-// ---------- Inserate laden (mit Filtern) ----------
-async function loadListings(){
-  const grid = document.getElementById('grid');
-  const count = document.getElementById('count');
-
-  let query = supabaseClient
-    .from('listings')
-    .select('*')
-    .eq('status', 'aktiv');
-
-  const marke = document.getElementById('fil_marke').value;
-  const modell = document.getElementById('fil_modell').value;
-  const typ = document.getElementById('fil_typ').value;
-  const preis = document.getElementById('fil_preis').value;
-  const km = document.getElementById('fil_km').value;
-  const ort = document.getElementById('fil_ort').value;
-
-  if(marke) query = query.eq('marke', marke);
-  if(modell) query = query.eq('modell', modell);
-  if(typ) query = query.eq('typ', typ);
-  if(preis) query = query.lte('preis', parseFloat(preis));
-  if(km) query = query.lte('km', parseInt(km));
-  if(ort) query = query.ilike('ort', `%${ort}%`);
-
-  const psVon = document.getElementById('fil_ps_von').value;
-  const psBis = document.getElementById('fil_ps_bis').value;
-  const gewicht = document.getElementById('fil_gewicht').value;
-  const zylinder = document.getElementById('fil_zylinder').value;
-  const drehmoment = document.getElementById('fil_drehmoment').value;
-  const sitzhoehe = document.getElementById('fil_sitzhoehe').value;
-  const antrieb = document.getElementById('fil_antrieb').value;
-  const baujahrVon = document.getElementById('fil_baujahr_von').value;
-  const baujahrBis = document.getElementById('fil_baujahr_bis').value;
-  const fsklasse = document.getElementById('fil_fsklasse').value;
-  const verkaeufertyp = document.getElementById('fil_verkaeufertyp').value;
-  const nurUnfallfrei = document.getElementById('fil_unfallfrei').checked;
-  const nurScheckheft = document.getElementById('fil_scheckheft').checked;
-
-  if(psVon) query = query.gte('ps', parseInt(psVon));
-  if(psBis) query = query.lte('ps', parseInt(psBis));
-  if(gewicht) query = query.lte('gewicht', parseInt(gewicht));
-  if(zylinder) query = query.lte('zylinder', parseInt(zylinder));
-  if(drehmoment) query = query.lte('drehmoment', parseInt(drehmoment));
-  if(sitzhoehe) query = query.lte('sitzhoehe', parseInt(sitzhoehe));
-  if(antrieb) query = query.eq('antriebsart', antrieb);
-  if(baujahrVon) query = query.gte('baujahr', parseInt(baujahrVon));
-  if(baujahrBis) query = query.lte('baujahr', parseInt(baujahrBis));
-  if(fsklasse) query = query.eq('fs_klasse', fsklasse);
-  if(verkaeufertyp) query = query.eq('verkaeufer_typ', verkaeufertyp);
-  if(nurUnfallfrei) query = query.eq('unfallfrei', true);
-  if(nurScheckheft) query = query.eq('scheckheft', true);
-
-  const { data, error } = await query.order('created_at', { ascending: false });
-
-  if(error){ grid.innerHTML = `<p class="empty">Fehler beim Laden: ${error.message}</p>`; return; }
-  if(!data.length){ grid.innerHTML = `<p class="empty">Noch keine Inserate — sei der Erste!</p>`; count.textContent = "0 Treffer"; return; }
-
-  count.textContent = `${data.length} Treffer`;
-  window._listingsCache = data;
-  grid.innerHTML = data.map(b => {
-    const bilder = b.bilder && b.bilder.length ? b.bilder : (b.bild_url ? [b.bild_url] : []);
-    return `
-    <article class="card" onclick="openDetail('${b.id}')">
-      <div class="card-media">
-        ${bilder.length ? `<img src="${bilder[0]}" alt="${b.marke} ${b.modell}">` : ''}
-        ${bilder.length > 1 ? `<span class="photo-count">📷 ${bilder.length}</span>` : ''}
-      </div>
-      <div class="card-body">
-        <h3>${b.marke} ${b.modell}</h3>
-        <div class="specs">
-          <span>${b.baujahr}</span><span>${b.km.toLocaleString('de-DE')} km</span>
-          <span>${b.ccm} ccm</span><span>${b.typ}</span>
         </div>
-        <div class="price-row">
-          <span class="price">${Number(b.preis).toLocaleString('de-DE')} €</span>
-          <span>${b.ort || ''}</span>
+        <div class="flip-face flip-back">
+          <small>${b.tag}</small>
+          <div>
+            <h3>${b.title}</h3>
+            <p>${b.body}</p>
+          </div>
         </div>
       </div>
-    </article>
-  `;}).join('');
-}
+    </div>`).join('');
 
-function openDetail(id){
-  const b = (window._listingsCache || []).find(x => x.id === id);
-  if(!b) return;
-  const bilder = b.bilder && b.bilder.length ? b.bilder : (b.bild_url ? [b.bild_url] : []);
-  const content = document.getElementById('detailModalContent');
-  content.innerHTML = `
-    ${bilder.length ? `
-      <div class="detail-gallery" id="detailGallery">
-        ${bilder.map(url => `<img src="${url}">`).join('')}
-      </div>
-      ${bilder.length > 1 ? `<div class="detail-thumbs">${bilder.map((url,i) => `<img src="${url}" onclick="document.getElementById('detailGallery').children[${i}].scrollIntoView({behavior:'smooth',inline:'start'})">`).join('')}</div>` : ''}
-    ` : ''}
-    <div class="detail-body">
-      <h2>${b.marke} ${b.modell}</h2>
-      <div class="detail-price">${Number(b.preis).toLocaleString('de-DE')} €</div>
-      <div class="detail-specs">
-        <span>📅 ${b.baujahr}</span>
-        <span>🛣️ ${b.km.toLocaleString('de-DE')} km</span>
-        <span>⚙️ ${b.ccm} ccm</span>
-        <span>🏍️ ${b.typ}</span>
-        <span>📍 ${b.ort || 'Ort nicht angegeben'}</span>
-        ${b.ps ? `<span>💪 ${b.ps} PS</span>` : ''}
-        ${b.gewicht ? `<span>⚖️ ${b.gewicht} kg</span>` : ''}
-        ${b.zylinder ? `<span>🔧 ${b.zylinder} Zylinder</span>` : ''}
-        ${b.drehmoment ? `<span>🌀 ${b.drehmoment} Nm</span>` : ''}
-        ${b.sitzhoehe ? `<span>📏 Sitzhöhe ${b.sitzhoehe} cm</span>` : ''}
-        ${b.antriebsart ? `<span>⛓️ ${b.antriebsart}</span>` : ''}
-        ${b.fs_klasse ? `<span>🪪 Klasse ${b.fs_klasse}</span>` : ''}
-        ${b.verkaeufer_typ ? `<span>👤 ${b.verkaeufer_typ}</span>` : ''}
-        ${b.unfallfrei ? `<span>✅ Unfallfrei</span>` : ''}
-        ${b.scheckheft ? `<span>📗 Scheckheftgepflegt</span>` : ''}
-      </div>
-      <div class="detail-desc">${b.beschreibung ? b.beschreibung.replace(/</g,'&lt;') : '<em style="color:var(--steel)">Keine Beschreibung hinterlegt.</em>'}</div>
-      <div class="modal-actions">
-        ${currentUser && currentUser.id !== b.user_id
-          ? `<button type="button" class="btn btn-accent" onclick="openContactModal('${b.id}','${b.user_id}')">Nachricht an Verkäufer</button>`
-          : ''}
-        <button type="button" class="btn btn-cancel" onclick="closeModal('detailModalBg')">Schließen</button>
-      </div>
-    </div>
-  `;
-  openModal('detailModalBg');
-}
-
-// ---------- Inserat erstellen / bearbeiten ----------
-document.getElementById('insertForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const msg = document.getElementById('insertMsg');
-  if(!currentUser){ msg.textContent = "Bitte zuerst anmelden."; msg.className="msg err"; return; }
-
-  const files = document.getElementById('f_bild').files;
-  let neueBilder = [];
-  for(const file of files){
-    const path = `${currentUser.id}/${Date.now()}-${file.name}`;
-    const { error: uploadErr } = await supabaseClient.storage.from('bike-images').upload(path, file);
-    if(uploadErr){ msg.textContent = "Bild-Upload fehlgeschlagen: " + uploadErr.message; msg.className="msg err"; return; }
-    const { data: pub } = supabaseClient.storage.from('bike-images').getPublicUrl(path);
-    neueBilder.push(pub.publicUrl);
-  }
-
-  const payload = {
-    marke: document.getElementById('f_marke').value,
-    modell: document.getElementById('f_modell').value === '__sonstiges__'
-      ? document.getElementById('f_modell_sonstiges').value
-      : document.getElementById('f_modell').value,
-    typ: document.getElementById('f_typ').value,
-    baujahr: parseInt(document.getElementById('f_baujahr').value),
-    km: parseInt(document.getElementById('f_km').value),
-    ccm: parseInt(document.getElementById('f_ccm').value),
-    preis: parseFloat(document.getElementById('f_preis').value),
-    ort: document.getElementById('f_ort').value,
-    beschreibung: document.getElementById('f_beschreibung').value,
-    ps: document.getElementById('f_ps').value ? parseInt(document.getElementById('f_ps').value) : null,
-    gewicht: document.getElementById('f_gewicht').value ? parseInt(document.getElementById('f_gewicht').value) : null,
-    zylinder: document.getElementById('f_zylinder').value ? parseInt(document.getElementById('f_zylinder').value) : null,
-    drehmoment: document.getElementById('f_drehmoment').value ? parseInt(document.getElementById('f_drehmoment').value) : null,
-    sitzhoehe: document.getElementById('f_sitzhoehe').value ? parseInt(document.getElementById('f_sitzhoehe').value) : null,
-    antriebsart: document.getElementById('f_antriebsart').value || null,
-    fs_klasse: document.getElementById('f_fsklasse').value || null,
-    verkaeufer_typ: document.getElementById('f_verkaeufertyp').value || null,
-    unfallfrei: document.getElementById('f_unfallfrei').checked,
-    scheckheft: document.getElementById('f_scheckheft').checked,
-  };
-
-  if(editingId){
-    if(neueBilder.length){
-      const bestehende = (window._listingsCache || []).find(x => x.id === editingId);
-      const alteBilder = bestehende && bestehende.bilder && bestehende.bilder.length
-        ? bestehende.bilder
-        : (bestehende && bestehende.bild_url ? [bestehende.bild_url] : []);
-      payload.bilder = [...alteBilder, ...neueBilder];
-    }
-  } else {
-    payload.bilder = neueBilder;
-  }
-
-  let error;
-  if(editingId){
-    ({ error } = await supabaseClient.from('listings').update(payload).eq('id', editingId));
-  } else {
-    payload.user_id = currentUser.id;
-    ({ error } = await supabaseClient.from('listings').insert(payload));
-  }
-
-  if(error){ msg.textContent = error.message; msg.className="msg err"; return; }
-  msg.textContent = editingId ? "Änderungen gespeichert!" : "Inserat veröffentlicht!";
-  msg.className="msg ok";
-  document.getElementById('insertForm').reset();
-  const wasEditing = editingId;
-  editingId = null;
-  setTimeout(() => { closeModal('insertModalBg'); loadListings(); if(wasEditing) openMyListings(); }, 800);
-});
-
-// ---------- Intelligente Suche (Texterkennung) ----------
-function parseSmartSearch(text){
-  const t = text.toLowerCase();
-
-  // Filter erstmal komplett zurücksetzen
-  document.getElementById('filterForm').reset();
-  document.getElementById('extraFilters').querySelectorAll('input,select').forEach(el => {
-    if(el.type === 'checkbox') el.checked = false; else el.value = '';
+  grid.querySelectorAll('.flip-card').forEach(card => {
+    const toggle = () => card.classList.toggle('flipped');
+    card.addEventListener('click', toggle);
+    card.addEventListener('keydown', e => { if(e.key==='Enter' || e.key===' '){ e.preventDefault(); toggle(); }});
   });
 
-  const marken = ['bmw','ducati','honda','kawasaki','ktm','yamaha','suzuki','triumph','harley-davidson','aprilia','moto guzzi','royal enfield'];
-  const gefundeneMarke = marken.find(m => t.includes(m));
-  if(gefundeneMarke){
-    const select = document.getElementById('fil_marke');
-    [...select.options].forEach(o => { if(o.value.toLowerCase() === gefundeneMarke) select.value = o.value; });
-  }
+  const faqs = [
+    {q:"Qu'est-ce qui distingue Ciao Energy des autres energy drinks ?", a:"Une recette pensée dans le détail : moins de sucre que les boissons classiques, des arômes naturels plutôt qu'artificiels, de la caféine issue de grains de café plutôt que de synthèse, et de la stévia plutôt que des édulcorants de synthèse."},
+    {q:"Ciao Energy est-elle gazeuse ?", a:"Oui, avec une effervescence marquée pour amplifier la fraîcheur en bouche."},
+    {q:"Quelle est la teneur en sucre et en calories ?", a:"4g de sucre et 17 kcal pour 100 mL, grâce à un dosage précis entre sucre de canne et extraits de stévia."},
+    {q:"Quelles vitamines contient une canette ?", a:"Niacine (B3), vitamine B6 et biotine (B8), qui contribuent à un métabolisme énergétique normal et à la réduction de la fatigue."},
+    {q:"Y a-t-il des colorants artificiels ?", a:"Non. Les couleurs sont élaborées à partir de denrées alimentaires colorantes."},
+    {q:"Ciao Energy contient-elle de la taurine ?", a:"Non. L'énergie vient de sources végétales de caféine (grains de café et guarana) ; la recette reste volontairement simple."},
+    {q:"Tout le monde peut-il en boire ?", a:"La teneur en caféine étant élevée (32mg/100ml), la consommation est déconseillée aux enfants et aux femmes enceintes ou allaitantes."},
+    {q:"Où est embouteillée Ciao Energy ?", a:"En France, selon des standards de qualité européens."},
+    {q:"Comment la conserver ?", a:"À température ambiante avant ouverture, à l'abri de la lumière et de la chaleur. Après ouverture : au réfrigérateur, à consommer sous 1 jour."},
+  ];
+  const faqList = document.getElementById('faqList');
+  faqList.innerHTML = faqs.map((f,i) => `
+    <div class="faq-item" data-i="${i}">
+      <button class="faq-q" aria-expanded="false">
+        <span>${f.q}</span><span class="plus">+</span>
+      </button>
+      <div class="faq-a"><p>${f.a}</p></div>
+    </div>`).join('');
 
-  const typen = ['naked bike','reiseenduro','sportler','cruiser','roller'];
-  const gefundenerTyp = typen.find(ty => t.includes(ty));
-  if(gefundenerTyp){
-    const select = document.getElementById('fil_typ');
-    [...select.options].forEach(o => { if(o.value.toLowerCase() === gefundenerTyp) select.value = o.value; });
-  }
-
-  const psMatch = t.match(/(\d+)\s*ps\b/);
-  if(psMatch) document.getElementById('fil_ps_bis').value = psMatch[1];
-
-  const sitzMatch = t.match(/(\d+)\s*(cm|mm)?\s*sitzh/);
-  if(sitzMatch){
-    let val = parseInt(sitzMatch[1]);
-    if(sitzMatch[2] === 'mm') val = Math.round(val / 10);
-    document.getElementById('fil_sitzhoehe').value = val;
-  }
-
-  const gewichtMatch = t.match(/(\d+)\s*kg\b/);
-  if(gewichtMatch) document.getElementById('fil_gewicht').value = gewichtMatch[1];
-
-  const drehmomentMatch = t.match(/(\d+)\s*nm\b/);
-  if(drehmomentMatch) document.getElementById('fil_drehmoment').value = drehmomentMatch[1];
-
-  const zylinderMatch = t.match(/(\d+)\s*zylinder/);
-  if(zylinderMatch) document.getElementById('fil_zylinder').value = zylinderMatch[1];
-
-  const kmMatch = t.match(/(\d+)\s*km\b/);
-  if(kmMatch) document.getElementById('fil_km').value = kmMatch[1];
-
-  const preisMatch = t.match(/(\d+)\s*(€|euro)/);
-  if(preisMatch) document.getElementById('fil_preis').value = preisMatch[1];
-
-  const jahrMatch = t.match(/\b(19|20)\d{2}\b/);
-  if(jahrMatch){
-    document.getElementById('fil_baujahr_von').value = jahrMatch[0];
-    document.getElementById('fil_baujahr_bis').value = jahrMatch[0];
-  }
-
-  if(t.includes('unfallfrei')) document.getElementById('fil_unfallfrei').checked = true;
-  if(t.includes('scheckheft')) document.getElementById('fil_scheckheft').checked = true;
-
-  const antriebe = ['kette','riemen','kardan'];
-  const gefundenerAntrieb = antriebe.find(a => t.includes(a));
-  if(gefundenerAntrieb){
-    const select = document.getElementById('fil_antrieb');
-    [...select.options].forEach(o => { if(o.value.toLowerCase() === gefundenerAntrieb) select.value = o.value; });
-  }
-
-  document.getElementById('extraFilters').classList.add('open');
-  loadListings();
-}
-
-document.getElementById('smartSearchBtn').addEventListener('click', () => {
-  parseSmartSearch(document.getElementById('smartSearch').value);
-});
-document.getElementById('smartSearch').addEventListener('keydown', (e) => {
-  if(e.key === 'Enter') parseSmartSearch(document.getElementById('smartSearch').value);
-});
-
-document.getElementById('fil_search').addEventListener('click', () => loadListings());
-document.getElementById('fil_reset').addEventListener('click', () => {
-  document.getElementById('filterForm').reset();
-  document.getElementById('extraFilters').querySelectorAll('input,select').forEach(el => {
-    if(el.type === 'checkbox') el.checked = false; else el.value = '';
+  faqList.querySelectorAll('.faq-item').forEach(item => {
+    const btn = item.querySelector('.faq-q');
+    const answer = item.querySelector('.faq-a');
+    btn.addEventListener('click', () => {
+      const isOpen = item.classList.contains('open');
+      faqList.querySelectorAll('.faq-item.open').forEach(o => {
+        if(o !== item){ o.classList.remove('open'); o.querySelector('.faq-a').style.maxHeight = null; o.querySelector('.faq-q').setAttribute('aria-expanded','false'); }
+      });
+      item.classList.toggle('open', !isOpen);
+      btn.setAttribute('aria-expanded', String(!isOpen));
+      answer.style.maxHeight = !isOpen ? answer.scrollHeight + 'px' : null;
+    });
   });
-  loadListings();
-});
 
-refreshAuthUI();
-loadListings();
+  document.getElementById('nlForm').addEventListener('submit', e => {
+    e.preventDefault();
+    document.getElementById('nlMsg').textContent = 'Votre inscription est confirmée.';
+    e.target.reset();
+  });
 </script>
+
 </body>
 </html>
